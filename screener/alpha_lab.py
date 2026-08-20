@@ -5,7 +5,7 @@ Published ICIRs are not transferable — they are measured on other universes,
 periods and horizons (Alpha191 on A-shares, Alpha101 on a different era).  So
 this tool computes everything empirically on your own Alpaca data:
 
-  1. DATA CLEANING (per the "kick out and tune outdated values" step)
+  1. DATA CLEANING (drop what is untradeable, tame what is extreme)
      - drop tickers with too little history
      - drop bars that are stale/untradeable: non-positive volume, non-finite or
        non-positive prices, high<low, and frozen runs (price unchanged for
@@ -20,7 +20,7 @@ this tool computes everything empirically on your own Alpaca data:
      - IC mean / std / ICIR (mean/std) / t-stat / share of positive days
      - DECAY CHECK: IC on the first vs second half of the window
 
-  3. SELECTION ("kick out outdated")
+  3. SELECTION (drop the weak and the unstable)
      - drop factors below --min-icir
      - drop factors whose IC SIGN FLIPS between halves (unstable / decayed)
      - keep the --top N survivors by |ICIR|, writing alpha_selection.json
@@ -397,7 +397,7 @@ def main() -> int:
     rep = rep.sort_values("abs_icir", ascending=False).reset_index(drop=True)
     rep.drop(columns=["abs_icir"]).to_csv(args.report, index=False)
 
-    # --- 4. select ("kick out outdated") ------------------------------------
+    # --- 4. select: drop the weak and the sign-unstable ----------------------
     kept = rep[(rep["icir"].abs() >= args.min_icir) & (~rep["sign_flip"])]
     dropped_weak = rep[rep["icir"].abs() < args.min_icir]["factor"].tolist()
     dropped_flip = rep[rep["sign_flip"]]["factor"].tolist()

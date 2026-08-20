@@ -279,7 +279,7 @@ def main() -> int:
     results.append(run_benchmark(px, f"static {avg_w * 100:.0f}% KC50", avg_w, idx,
                                  args.rebalance, args.cost_bps))
     results.append(run_strategy(px, ix.composite(comps[["valuation"]], {"valuation": 1.0}),
-                                "ratio only (video)", **kw))
+                                "ratio only", **kw))
 
     for r in results:
         r.equity = r.equity.loc[TRADED_START:]

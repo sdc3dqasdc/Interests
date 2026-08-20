@@ -74,7 +74,7 @@ standard deviation so a reading is in sigma units.
 
 | component | what it is | weight |
 |---|---|---|
-| `valuation` | QQQ/SPY ratio's gap from its 200-day trend, **inverted** — the video's idea | 1.00 |
+| `valuation` | QQQ/SPY ratio's gap from its 200-day trend, **inverted** — the seed idea | 1.00 |
 | `momentum` | 6-month QQQ-vs-SPY relative return — the brake on the value trap | 1.00 |
 | `reversal` | 1-month relative return, inverted | 0.50 |
 | `regime` | SPY vs its own rising/falling 200-day SMA | 1.00 |
@@ -119,7 +119,7 @@ Sharpe, net of costs:
 | hold SPY | 0.52 | 0.22 | 0.90 |
 | 50/50 rebalanced | 0.53 | 0.23 | 0.95 |
 | static 64% QQQ *(beta-matched)* | 0.53 | 0.23 | 0.96 |
-| ratio only (the video's rule) | 0.45 | 0.14 | 0.90 |
+| ratio only | 0.45 | 0.14 | 0.90 |
 
 The beta-matched line is the control that matters: a rule sitting at 64% QQQ on
 average beats SPY in any period QQQ won, with no skill involved. NTI-core is
@@ -154,6 +154,6 @@ much* Nasdaq to hold, and it survives every parameter it could have been fitted
 to (tilt size 0.10–0.50, rebalance 1–21 days, execution lag 1–10 days all give
 Sharpe 0.57–0.62). Treat it as an allocation dial, not a market-timing signal.
 
-The one strong claim the data does support is the negative one: the ratio rule
-from the video, applied to QQQ/SPY, loses money against every alternative here,
+The one strong claim the data does support is the negative one: the raw ratio
+rule, applied to QQQ/SPY, loses money against every alternative here,
 in both halves independently.

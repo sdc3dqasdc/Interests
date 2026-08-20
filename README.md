@@ -305,6 +305,15 @@ python -m china_rotation.backtest --selftest     # lookahead check
 
 ---
 
+## Tooling
+
+Written with [Claude Code](https://claude.com/claude-code) as a coding
+assistant. The research questions, the selection rules, the choice of what to
+test and the decisions about what to keep are mine; the assistant was used to
+implement and iterate on them.
+
+---
+
 Research code, not investment advice. Backtested results are not a promise of
 future returns, and §1.4 is the honest summary of how much of this is
 statistically established: not much yet.

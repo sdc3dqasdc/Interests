@@ -1479,7 +1479,7 @@ def main() -> int:
                     f"{news_reason}; penalty {penalty:+.1f} pts" if penalty
                     else f"{news_reason}; no penalty")
 
-                # Legacy hard reject, only when explicitly asked for.
+                # Legacy hard reject, applied only when the flag is set.
                 if (args.news_negative_threshold is not None and negative_pct is not None
                         and negative_pct >= args.news_negative_threshold):
                     row["company_selection"] = "REJECT"

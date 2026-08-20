@@ -32,7 +32,7 @@ the same tests on 27 years split into two 13-year halves.
    |---|---|---|---|
    | **KDI (all 8)** | **0.93** | 0.45 | **1.23** |
    | KDI-core (US subset, ported) | 0.54 | 0.38 | 0.65 |
-   | ratio only (the video's idea) | 0.77 | 0.40 | 1.00 |
+   | ratio only | 0.77 | 0.40 | 1.00 |
 
 2. **The ratio-mean-reversion idea — the one thing that lost in the US — is
    competitive here**, beating a 50/50 blend and the beta-matched static
@@ -106,7 +106,7 @@ point-in-time reading matches the full-history one to 1e-10 — passes here too.
 |---|---|---|---|---|
 | **KDI (all 8)** | **0.93** | 0.45 | **1.23** | -22.6% |
 | KDI-core (ported US subset) | 0.54 | 0.38 | 0.65 | -23.3% |
-| ratio only (video) | 0.77 | 0.40 | 1.00 | -26.8% |
+| ratio only | 0.77 | 0.40 | 1.00 | -26.8% |
 | hold DIBO | 0.71 | 0.79 | 0.65 | -16.5% |
 | hold KC50 | 0.23 | -0.32 | 0.53 | -59.6% |
 | static 46% KC50 (beta-matched) | 0.54 | 0.25 | 0.72 | -24.8% |

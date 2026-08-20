@@ -10,7 +10,7 @@ what got people short the Nasdaq for the whole of 2013-2021 — the ratio was
 is one input of several, not the signal:
 
   * valuation   the QQQ/SPY ratio's gap from its own long trend, INVERTED
-                (the video's idea: low ratio -> favour tech)
+                (the seed idea: a cheap ratio favours tech)
   * momentum    6-month QQQ-vs-SPY relative return, straight (a cheap ratio
                 that is still falling is a value trap; this is the brake)
   * reversal    1-month relative return, inverted (fade the blow-off)
@@ -81,8 +81,8 @@ CANDIDATE_WEIGHTS: dict[str, float] = {
 # hurts both halves.  That leaves regime, momentum, rel_vol and rates.
 #
 # The five dropped ones fail in two distinguishable ways.  valuation and
-# reversal -- both mean-reversion bets, and the valuation leg is the video's
-# actual idea -- are negative in BOTH halves: in the US the stretched QQQ/SPY
+# reversal -- both mean-reversion bets, and the valuation leg is the seed
+# idea itself -- are negative in BOTH halves: in the US the stretched QQQ/SPY
 # ratio has been a reason to keep holding, not to sell.  credit, semis and
 # concentration flip sign between halves, which is the signature of a factor
 # that was never there.  Relative weights of the survivors are unchanged from
@@ -139,7 +139,7 @@ def build_components(px: pd.DataFrame, fear_greed: pd.Series | None = None) -> p
 
     comps = {}
 
-    # The video's signal: how far the ratio sits above/below its own long trend.
+    # The seed signal: how far the ratio sits above/below its own long trend.
     # Inverted -- a stretched ratio is a reason to step back, not to pile in.
     comps["valuation"] = -_z(rel - rel.ewm(span=200, min_periods=100).mean())
 

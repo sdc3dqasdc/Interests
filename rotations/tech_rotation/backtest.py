@@ -340,13 +340,13 @@ def main() -> int:
         run_benchmark(px, f"static {strat.weights.mean() * 100:.0f}% {dt.TECH}",
                       float(strat.weights.mean()), idx, args.rebalance, args.cost_bps),
     ]
-    # The trimmed index, and the video's ratio on its own as the honest control.
+    # The trimmed index, and the raw ratio rule on its own as the honest control.
     core_nti = ix.composite(comps[list(ix.CORE_WEIGHTS)], ix.CORE_WEIGHTS)
     core = run_strategy(px, core_nti, "NTI-core (4 factors)", **kw)
     results.append(core)
     results.append(run_strategy(px, core_nti, "NTI-core 2-state", **{**kw, "ladder": True}))
     results.append(run_strategy(px, ix.composite(comps[["valuation"]], {"valuation": 1.0}),
-                                "ratio only (video)", **kw))
+                                "ratio only", **kw))
 
     span = f"{idx[0].date()} -> {idx[-1].date()}"
     print(f"\n=== Full sample  {span}  ({len(idx) / TRADING_DAYS:.1f}y) ===")
