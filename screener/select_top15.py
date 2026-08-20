@@ -100,9 +100,8 @@ def component_scores(row: pd.Series) -> dict[str, float]:
     # see ab_sweep.py "rsi_shape_in_band"), while 60-65 wins most often
     # (64.3%).  alpha_lab agrees at the universe level: |RSI-50| scores
     # ICIR -0.238 (t=-3.38), so proximity to 50 predicts LOWER returns.
-    # The old triangle peaked at 50 and therefore handed full marks to the
-    # weakest zone.  A monotone ramp fits both measurements.  The 40-45 bucket
-    # also did well but on only 54 picks, too thin to justify a second peak.
+    # A monotone ramp fits both measurements.  The 40-45 bucket also did well,
+    # but on only 54 picks — too thin to justify a second peak.
     s["rsi_zone"] = _clamp01((v - 40.0) / 25.0) if pd.notna(v) else 0.5
 
     v = row.get("atr_pct")

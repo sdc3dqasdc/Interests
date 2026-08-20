@@ -38,19 +38,14 @@ import win_rate_tester as wrt
 VARIANTS: dict[str, dict[str, Any]] = {
     "baseline":        {},
 
-    # ================== READ THIS BEFORE TRUSTING A WINNER ==================
-    # This sweep ranks by per-pick avg ROI / excess over OVERLAPPING windows.
-    # That metric repeatedly disagreed with the portfolio backtest, which
-    # models position limits, rebalancing and compounding:
-    #   - the sweep loved a wider stop (25) and wider ext band (25/-8); the
-    #     backtest showed BOTH cut portfolio excess (+38% -> +23%). Reverted.
-    #   - hold_30 was the sweep's TOP variant (+5.91 excess); in the backtest
-    #     it COLLAPSED to +2.76% excess.
-    # Lesson: treat a sweep winner as a hypothesis and confirm it in backtest.py
-    # (a one-off `--hold-days`/`--stop-loss-pct`/... run) before adopting it.
-    # baseline now runs the ORIGINAL tight defaults (stop 15, ext 15/-3), which
-    # the backtest showed are best.
-    # =======================================================================
+    # This sweep ranks by per-pick avg ROI / excess over OVERLAPPING windows,
+    # a metric that has repeatedly disagreed with the portfolio backtest, which
+    # models position limits, rebalancing and compounding.  A wider stop (25)
+    # and a wider ext band (25/-8) both won here and cut portfolio excess from
+    # +38% to +23%; hold_30 topped the sweep at +5.91 excess and collapsed to
+    # +2.76% in the backtest.  Treat a winner here as a hypothesis and confirm
+    # it with a one-off backtest.py run before adopting it.  baseline runs the
+    # tight defaults (stop 15, ext 15/-3) that the backtest preferred.
 
     # --- exit mechanics ------------------------------------------------------
     "noStop":          {"stop_loss_pct": 0.0},            # sweep-neutral; backtest-negative
@@ -61,10 +56,6 @@ VARIANTS: dict[str, dict[str, Any]] = {
     "rsi_30_70":       {"min_rsi": 30.0, "max_rsi": 70.0},
     "ext_wide":        {"max_ext_sma50": 25.0, "min_ext_sma50": -8.0},
 
-    # dropped: rs_min5 & mom_win9 (byte-identical no-ops vs baseline last run),
-    # dv_50m (-2.5pp dud), hold_30 (sweep +5.91 excess but backtest +2.76% —
-    # the clearest example of why sweep winners need backtest confirmation),
-    # tp_35 (sweep-positive but take-profits cap winners; not worth the churn).
 }
 
 

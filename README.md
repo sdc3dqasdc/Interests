@@ -1,38 +1,37 @@
 # Quant Research
 
-Three systematic equity projects that share one question: **given a pile of
-plausible signals, which ones do you actually keep?**
+Three systematic equity projects I built around one question: **given a pile of
+plausible signals, which ones do I actually keep?**
 
-Every folder here answers it with a measurement rather than an opinion, and
-each uses a *different* selection procedure because the statistical setting is
-different. This README is about those procedures and the math behind them; the
+I use a different selection procedure in each folder, because the statistical
+setting is different. This README covers those procedures and their math; the
 per-project READMEs cover mechanics.
 
-| Folder | Setting | Selection procedure |
+| Folder | Setting | How I select |
 |---|---|---|
 | [`screener/`](screener/) | ~1500-name cross-section, daily | Rank-IC / ICIR with a sign-stability filter |
 | [`rotations/tech_rotation/`](rotations/tech_rotation/) | 1 spread (QQQ−SPY), 25y | A-priori weights + leave-one-out ablation, two halves |
-| [`rotations/china_rotation/`](rotations/china_rotation/) | 1 spread (STAR50−DivLowVol), ~5.5y | Same, and it reaches the opposite conclusion |
+| [`rotations/china_rotation/`](rotations/china_rotation/) | 1 spread (STAR50−DivLowVol), ~5.5y | Same, and I get the opposite answer |
 
 ---
 
-## 1. Cross-sectional selection: IC, ICIR, and what they don't tell you
+## 1. Cross-sectional selection: IC, ICIR, and what they don't tell me
 
-[`screener/alpha_lab.py`](screener/alpha_lab.py) defines a pool of **29**
-candidate factors — GTJA Alpha-191 forms, Alpha-101-style price/volume forms,
-classic academic anomalies (12-1 momentum, short-term reversal, low-vol,
+In [`screener/alpha_lab.py`](screener/alpha_lab.py) I test **29** candidate
+factors — GTJA Alpha-191 forms, Alpha-101-style price/volume forms, classic
+academic anomalies (12-1 momentum, short-term reversal, low-vol,
 52-week-high proximity, negative skew), and a deliberate grab-bag of technical
 indicators (RSI family, MACD family, Bollinger %B, CMF, TRIX, Williams %R).
-The grab-bag is there on purpose: a selection rule you only ever feed good
-candidates is a rule you have not tested.
+I include the grab-bag on purpose: a selection rule I only ever feed good
+candidates is a rule I haven't tested.
 
-Published ICIRs are not transferable — they were measured on other universes,
-eras and horizons — so everything is recomputed on this universe.
+I don't reuse published ICIRs — they were measured on other universes, eras
+and horizons — so I recompute everything on my own universe.
 
 ### 1.1 Conditioning the cross-section
 
-Each factor is computed per ticker, then, **per date**, the cross-section is
-winsorized by median absolute deviation and standardised:
+I compute each factor per ticker, then, **per date**, winsorize the
+cross-section by median absolute deviation and standardise it:
 
 $$
 m = \operatorname{med}(f), \qquad
@@ -46,35 +45,36 @@ $$
 z_i = \frac{\tilde{f}_i - \overline{\tilde{f}}}{s(\tilde{f})}, \qquad k = 5
 $$
 
-The constant $1.4826 = 1/\Phi^{-1}(0.75)$ is what makes the MAD a consistent
-estimator of $\sigma$ for Gaussian data, so $k$ is interpretable in sigma units
-while the estimator itself has a 50% breakdown point — one blown-up print
-cannot move the clip bounds, which a mean/std winsorization would let it do.
+I use MAD rather than mean/std because $1.4826 = 1/\Phi^{-1}(0.75)$ makes it a
+consistent estimator of $\sigma$ for Gaussian data — so $k$ stays interpretable
+in sigma units — while the estimator itself has a 50% breakdown point. One
+blown-up print cannot move my clip bounds, which is exactly what a mean/std
+winsorization would let it do.
 
-Before that, bars are cleaned (non-positive volume or price, `high < low`,
-non-finite values, and frozen runs of $\ge 5$ identical closes — halts and
-stale feeds masquerading as data), and a per-date eligibility gate
-($P \ge \$5$, dollar volume $\ge \$1\mathrm{M}$) keeps illiquid names from
-dominating a cross-section they could never be traded in.
+First I clean the bars (non-positive volume or price, `high < low`, non-finite
+values, and frozen runs of $\ge 5$ identical closes — halts and stale feeds
+masquerading as data), and apply a per-date eligibility gate ($P \ge \$5$,
+dollar volume $\ge \$1\mathrm{M}$) so illiquid names can't dominate a
+cross-section I could never have traded.
 
 ### 1.2 The IC series
 
-For each sampled date $t$, the **rank IC** is the Spearman correlation between
-the conditioned factor and the forward $h$-day return:
+For each sampled date $t$ I take the **rank IC** — the Spearman correlation
+between the conditioned factor and the forward $h$-day return:
 
 $$
 \mathrm{IC}_t \;=\; \operatorname{corr}\!\left(\operatorname{rank}(z_{t}),\;
 \operatorname{rank}(r_{t \to t+h})\right), \qquad h = 50
 $$
 
-Ranks, not levels: the payoff of a ranking model is invariant to any monotone
-transform of the factor, and the return cross-section has heavy enough tails
-that a Pearson IC would largely report where the two biggest movers landed.
-Dates with fewer than 20 eligible names are skipped. Every factor is written
-so that **higher = predicted better**, so a positive IC means it works as
-stated and a negative one means it works inverted.
+Ranks, not levels: my payoff is from a ranking, which is invariant to any
+monotone transform of the factor, and the return cross-section has heavy enough
+tails that a Pearson IC would largely tell me where the two biggest movers
+landed. I skip dates with fewer than 20 eligible names. I write every factor so
+that **higher = predicted better**, so a positive IC means it works as stated
+and a negative one means it works inverted.
 
-Summarising the series $\{\mathrm{IC}_t\}_{t=1}^{T}$:
+I summarise the series $\{\mathrm{IC}_t\}_{t=1}^{T}$ with:
 
 $$
 \mathrm{ICIR} = \frac{\overline{\mathrm{IC}}}{s(\mathrm{IC})},
@@ -83,15 +83,15 @@ t = \mathrm{ICIR}\sqrt{T}
 $$
 
 ICIR is the information ratio *of the signal itself* — how reliably the factor
-ranks, not how much it pays. It connects to portfolio performance through
-Grinold's fundamental law, $\mathrm{IR} \approx \mathrm{IC}\sqrt{\mathrm{BR}}$:
-a small per-name edge is only worth something applied across many independent
-bets, which is precisely why the screener is a cross-sectional ranker holding a
-basket, not a single-name call.
+ranks, not how much it pays. It reaches portfolio performance through Grinold's
+fundamental law, $\mathrm{IR} \approx \mathrm{IC}\sqrt{\mathrm{BR}}$: a small
+per-name edge is only worth something spread across many independent bets,
+which is why I built the screener as a cross-sectional ranker holding a basket
+rather than a single-name call.
 
-### 1.3 The selection rule
+### 1.3 My selection rule
 
-Split the IC series into two disjoint halves and keep a factor only if:
+I split the IC series into two disjoint halves and keep a factor only if:
 
 $$
 \lvert \mathrm{ICIR} \rvert \ge 0.02
@@ -102,19 +102,18 @@ $$
 
 then take the top $N=5$ survivors by $\lvert\mathrm{ICIR}\rvert$.
 
-The second condition does nearly all the work. The $\lvert\mathrm{ICIR}\rvert$
+The second condition does nearly all the work. My $\lvert\mathrm{ICIR}\rvert$
 floor is a noise gate that almost everything clears; the sign test is a crude
 but cheap stationarity check. Under a true constant edge, both halves agree
 with high probability; under the null $\mathrm{IC}=0$, they agree with
-probability $\tfrac{1}{2}$. So the filter roughly **halves the pass rate of
-pure noise while barely touching a real effect** — a favourable asymmetry when
-29 candidates are being screened at once. The report also records a decay
-figure, $\lvert \mathrm{IC}_2\rvert / \lvert \mathrm{IC}_1\rvert - 1$, so a
-factor that keeps its sign but loses its magnitude is visible rather than
-silently promoted.
+probability $\tfrac{1}{2}$. So it roughly **halves the pass rate of pure noise
+while barely touching a real effect** — an asymmetry I want when I'm screening
+29 candidates at once. I also record a decay figure,
+$\lvert \mathrm{IC}_2\rvert / \lvert \mathrm{IC}_1\rvert - 1$, so a factor that
+keeps its sign but loses its magnitude is visible to me rather than silently
+promoted.
 
-Measured on 2021-01-01 → 2026-07-21, $h=50$, 269 sampled cross-sections
-(`alpha_report.csv` is regenerated per run and gitignored):
+Measured on 2021-01-01 → 2026-07-21, $h=50$, 269 sampled cross-sections:
 
 | factor | ICIR | IC mean | t | % positive | half 1 → half 2 | verdict |
 |---|---:|---:|---:|---:|---|---|
@@ -128,16 +127,16 @@ Measured on 2021-01-01 → 2026-07-21, $h=50$, 269 sampled cross-sections
 | `rsi14_near50` | −0.088 | −0.0082 | −1.44 | 46.8 | 0.004 → −0.021 | **sign flip** |
 | `macd_hist` | −0.006 | −0.0008 | −0.10 | 49.4 | −0.009 → 0.008 | **sign flip** |
 
-Most of the RSI and MACD family — the indicators a discretionary screen would
-lean on hardest — sit at $\lvert\mathrm{ICIR}\rvert < 0.1$ **and** flip sign
-between halves. That is the signature of an effect that was never there.
+Most of the RSI and MACD family — the indicators a discretionary screen leans
+on hardest — sit at $\lvert\mathrm{ICIR}\rvert < 0.1$ **and** flip sign between
+halves. I read that as the signature of an effect that was never there.
 
-### 1.4 Three things this procedure gets wrong, stated plainly
+### 1.4 Three things I know are wrong with this procedure
 
-**The t-stats are inflated by overlap.** $t = \mathrm{ICIR}\sqrt{T}$ assumes
+**My t-stats are inflated by overlap.** $t = \mathrm{ICIR}\sqrt{T}$ assumes
 independent observations. With $h = 50$ trading days of forward return sampled
 every 5 sessions, each observation shares roughly $50/5 = 10$ neighbours'
-returns. Under a Hansen–Hodrick / Newey–West style correction the effective
+returns. Under a Hansen–Hodrick / Newey–West style correction my effective
 sample is closer to $T/10$, so the honest scale is $t/\sqrt{10}$:
 
 | factor | naive $t$ | overlap-adjusted $t$ |
@@ -148,35 +147,33 @@ sample is closer to $T/10$, so the honest scale is $t/\sqrt{10}$:
 | `atr_pct_14` | 4.80 | **1.52** |
 | `high52_prox` | 4.67 | **1.48** |
 
-**And they are not corrected for multiple testing.** Screening 29 candidates
-at $\alpha = 0.05$ expects $29 \times 0.05 \approx 1.5$ false discoveries by
+**And I don't correct for multiple testing.** Screening 29 candidates at
+$\alpha = 0.05$ expects $29 \times 0.05 \approx 1.5$ false discoveries by
 construction. A Bonferroni threshold of $0.05/29$ needs $\lvert t\rvert
-\gtrsim 3.1$; *nothing in the pool clears that once overlap is accounted for.*
-So none of these are treated as established alpha — they are ranking
-ingredients whose value is decided downstream by the portfolio backtest, which
-models position limits, rebalancing, costs and compounding. That arbiter has
-overruled the per-pick sweep before, which is why
-[`screener/ab_sweep.py`](screener/ab_sweep.py) carries a warning banner about
-its own metric.
+\gtrsim 3.1$, and *nothing in my pool clears that once overlap is accounted
+for.* So I don't treat any of these as established alpha. I treat them as
+ranking ingredients whose value is settled downstream by the portfolio
+backtest, which models position limits, rebalancing, costs and compounding.
+That arbiter has overruled my per-pick sweep before, which is why
+[`screener/ab_sweep.py`](screener/ab_sweep.py) warns about its own metric.
 
-**ICIR ranking ignores redundancy.** `low_vol_20` (negated 20-day return std)
-and `atr_pct_14` (negated ATR/price) are the same volatility view computed two
-ways, and they land at ICIR 0.294 and 0.293. Ranking marginally means the
-top-5 hands 40% of its weight to one idea. If the five survivors were
-genuinely independent, the combined signal would be
+**Ranking by ICIR ignores redundancy.** `low_vol_20` (negated 20-day return
+std) and `atr_pct_14` (negated ATR/price) are the same volatility view computed
+two ways, and they land at ICIR 0.294 and 0.293. Because I rank marginally, my
+top-5 hands 40% of its weight to one idea. If the five survivors were genuinely
+independent I would get
 
 $$
 \mathrm{ICIR}_{\text{combined}} = \sqrt{\textstyle\sum_i \mathrm{ICIR}_i^2} \approx 0.72
 $$
 
-but with two of them nearly collinear the real figure is lower, and the naive
-sum-of-squares is the number to distrust. A correlation-aware step —
-clustering the pool and keeping one representative per cluster, or a full
-$\Sigma^{-1}$ weighting — is the honest next iteration.
+but with two of them nearly collinear the real figure is lower. A
+correlation-aware step — clustering the pool and keeping one representative per
+cluster, or a full $\Sigma^{-1}$ weighting — is my next iteration.
 
 ### 1.5 From factors to a score
 
-Two downstream consumers weight factors in deliberately different ways.
+I weight factors two different ways downstream, on purpose.
 
 [`screener/month_predictor.py`](screener/month_predictor.py) weights **by
 measured $\lvert\mathrm{ICIR}\rvert$** at the 20-day horizon:
@@ -185,17 +182,17 @@ $$
 S = \sum_i \lvert\mathrm{ICIR}_i\rvert \cdot z_i
 $$
 
-which is the mean-variance optimum $w \propto \Sigma^{-1}\mu$ under the
-assumption $\Sigma = \mathrm{diag}(\sigma_i^2)$ — i.e. exactly the independence
-assumption §1.4 says is violated. It is used anyway because estimating a
-$5\times 5$ factor covariance from this sample would add more estimation error
-than it removes; the assumption is a choice, not an oversight.
+which is the mean-variance optimum $w \propto \Sigma^{-1}\mu$ under
+$\Sigma = \mathrm{diag}(\sigma_i^2)$ — i.e. exactly the independence assumption
+§1.4 says I'm violating. I use it anyway, because estimating a $5\times 5$
+factor covariance from this sample would add more estimation error than it
+removes.
 
 [`screener/select_top15.py`](screener/select_top15.py) does **not** use ICIR
-weights. Its eight components are weighted a priori (momentum 25, entry
-quality 20, trend 15, RSI zone 10, low vol 10, quality 10, earnings gap 5,
-liquidity 5) and — the important part — most are **non-monotone** in the
-underlying variable:
+weights. I set its eight component weights a priori (momentum 25, entry quality
+20, trend 15, RSI zone 10, low vol 10, quality 10, earnings gap 5, liquidity 5)
+and — the important part — most are **non-monotone** in the underlying
+variable:
 
 $$
 \mathrm{tri}(x; a, p, b) =
@@ -206,83 +203,80 @@ $$
 \end{cases}
 $$
 
-A triangular sweet-spot, not a rank. The thesis is *buy consolidation inside an
-uptrend*, so more 6-month momentum is better only up to ~30%, and a stock 25%
-above its 50-day SMA is worse than one sitting on it. Rank-IC cannot express
-that shape — a factor that is good in the middle and bad at both ends has an IC
-near zero — which is why this score is validated by backtest rather than by IC,
-and why the two files disagree by design.
+A triangular sweet-spot, not a rank. My thesis here is *buy consolidation
+inside an uptrend*, so more 6-month momentum is better only up to ~30%, and a
+stock 25% above its 50-day SMA is worse than one sitting on it. Rank IC cannot
+express that shape — a factor that is good in the middle and bad at both ends
+has an IC near zero — so I validate this score by backtest instead, and the two
+files disagree by design.
 
 ---
 
 ## 2. Time-series selection: ablation instead of IC
 
-The [rotation indices](rotations/) face the opposite problem. There is no
-cross-section — one spread, one observation per day — so IC is unavailable and
-$T$ is small in the units that matter (leadership regimes last years, so 25
-years of daily data is perhaps a handful of independent events). Fitting
-weights here would be curve-fitting with extra steps.
+The [rotation indices](rotations/) put me in the opposite position. There is no
+cross-section — one spread, one observation per day — so IC isn't available to
+me, and $T$ is small in the units that matter (leadership regimes last years,
+so 25 years of daily data is perhaps a handful of independent events). If I
+fitted weights here I would be curve-fitting with extra steps.
 
-So the weights are **set a priori by role and never fitted**: the two
-deliberately disagreeing views (valuation vs momentum) and the regime gate get
-1.00, confirmations get 0.50–0.75. Each component is a clipped trailing
-z-score,
+So I set the weights a priori by role and never fit them: the two deliberately
+disagreeing views (valuation vs momentum) and the regime gate get 1.00,
+confirmations get 0.50–0.75. Each component is a clipped trailing z-score,
 
 $$
 z_t = \operatorname{clip}\!\left(\frac{x_t - \mu_{t-W:t}}{\sigma_{t-W:t}},\, \pm 3\right),
 \qquad W = 1260 \text{ sessions } (\approx 5\text{y})
 $$
 
-trailing-only, so no reading uses a bar that had not printed yet — a `--selftest`
-lookahead check enforces this. Clipping at $3\sigma$ matters because March 2000
-and March 2020 are 6–8 sigma events that would otherwise let one day set the
-scale for a decade.
+trailing-only, so no reading uses a bar that hadn't printed yet — I enforce
+this with a `--selftest` lookahead check. I clip at $3\sigma$ because March
+2000 and March 2020 are 6–8 sigma events that would otherwise let one day set
+my scale for a decade.
 
 The composite is a weight-renormalised mean over whichever components exist
 (HYG lists in 2007, every z needs two years of warm-up), then **re-scaled by
-its own trailing standard deviation**. That second step is not cosmetic. For
-$n$ standardised components with average pairwise correlation $\rho$,
+its own trailing standard deviation**. That second step isn't cosmetic. For $n$
+standardised components with average pairwise correlation $\rho$,
 
 $$
 \operatorname{sd}\left(\frac{1}{n}\sum_i z_i\right)
 = \sqrt{\frac{1 + (n-1)\rho}{n}}
 $$
 
-so the spread of the raw average depends on how correlated the components
-happen to be *in that era* — and $\rho$ drifts. Dividing by the trailing std
-keeps "+2 sigma" meaning the same thing in 2004 and in 2024, which is a
-precondition for a fixed threshold to be meaningful at all.
+so the spread of my raw average depends on how correlated the components happen
+to be *in that era* — and $\rho$ drifts. Dividing by the trailing std keeps
+"+2 sigma" meaning the same thing in 2004 and in 2024, which I need before a
+fixed threshold means anything at all.
 
-**Selection is leave-one-out ablation, judged on both halves.** For every
+**I select by leave-one-out ablation, judged on both halves.** For every
 component: rebuild the index without it, and run it alone; measure Sharpe over
 a common window (measuring a HYG-only variant from HYG's 2007 inception would
-skip the dot-com bust and flatter it). Keep a component only if dropping it
+skip the dot-com bust and flatter it). I keep a component only if dropping it
 hurts **in both disjoint halves** (1999–2012 and 2013–now). Survivors keep
-their original relative weights, so nothing is re-fitted.
+their original relative weights, so I re-fit nothing.
 
-On US data (QQQ vs SPY) that leaves **regime, momentum, rel_vol, rates**, and
-the headline result is a negative one: the seed idea — the QQQ/SPY ratio's gap
-from trend, a pure mean-reversion bet — is *negative in both halves*. A
+On US data (QQQ vs SPY) that leaves me **regime, momentum, rel_vol, rates**,
+and my headline result is a negative one: the seed idea — the QQQ/SPY ratio's
+gap from trend, a pure mean-reversion bet — is *negative in both halves*. A
 stretched ratio has been a reason to keep holding, not to sell. `credit`,
 `semis` and `concentration` flip sign between halves: never there.
 
-The allocation rule gets the same treatment. Bucketing every historical reading
-against the next 21 days of QQQ−SPY return gives a table that is **flat above
-the line and negative below it**, in and out of sample — not a smooth ladder.
-Above −0.5σ the Nasdaq wins by roughly the same margin whatever the reading, so
-paying turnover to distinguish +0.6 from +2.0 buys nothing. Hence a two-state
-switch rather than a continuous tilt, at a threshold deliberately left untuned
-(Sharpe is 0.61–0.63 anywhere from −0.75 to 0.0 — a flat optimum is the only
-kind worth trusting).
+I give the allocation rule the same treatment. Bucketing every historical
+reading against the next 21 days of QQQ−SPY return gives a table that is **flat
+above the line and negative below it**, in and out of sample — not a smooth
+ladder. Above −0.5σ the Nasdaq wins by roughly the same margin whatever the
+reading, so paying turnover to distinguish +0.6 from +2.0 buys me nothing.
+Hence a two-state switch rather than a continuous tilt, at a threshold I
+deliberately left untuned (Sharpe is 0.61–0.63 anywhere from −0.75 to 0.0).
 
-**And the same procedure on China disagrees.**
+**And the same procedure on China disagrees with me.**
 [`china_rotation/`](rotations/china_rotation/) runs STAR50 vs Dividend-Low-Vol
-through the identical framework, and the US four-factor answer does *not*
-transfer — the recommended reading keeps all eight components. With only ~5.5
-years of traded history there is not enough sample to justify trimming, and
-porting a subset derived from a different market would be borrowing a
-conclusion rather than deriving one. Two markets, one procedure, two answers,
-is the point of running both.
+through the identical framework, and my US four-factor answer does *not*
+transfer — the reading I recommend keeps all eight components. With only ~5.5
+years of traded history I don't have the sample to justify trimming, and
+porting a subset I derived on a different market would be borrowing a
+conclusion rather than deriving one.
 
 ---
 
@@ -307,13 +301,12 @@ python -m china_rotation.backtest --selftest     # lookahead check
 
 ## Tooling
 
-Written with [Claude Code](https://claude.com/claude-code) as a coding
-assistant. The research questions, the selection rules, the choice of what to
-test and the decisions about what to keep are mine; the assistant was used to
-implement and iterate on them.
+I wrote this with [Claude Code](https://claude.com/claude-code) as a coding
+assistant. The research questions, the selection rules and the decisions about
+what to keep are mine; the assistant implemented and iterated on them.
 
 ---
 
 Research code, not investment advice. Backtested results are not a promise of
-future returns, and §1.4 is the honest summary of how much of this is
-statistically established: not much yet.
+future returns; §1.4 is my summary of how much of this is statistically
+established.

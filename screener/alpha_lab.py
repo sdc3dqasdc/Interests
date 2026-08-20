@@ -89,8 +89,6 @@ def _macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
 
 FACTORS: dict[str, Callable[[pd.DataFrame], pd.Series]] = {
     # --- GTJA Alpha-191 survivors (already used by the screener) -----------
-    # dropped gtja002_reversal (ICIR -0.018) and gtja111_volprice (-0.043,
-    # sign-flipping): both near-zero and unstable in run_report.md.
     "gtja054_pxaction": lambda d: -(
         ((d["Close"] - d["Open"]) / d["Close"]).abs().rolling(10).std()
         + (d["Close"] - d["Open"]) / d["Close"]
@@ -100,7 +98,6 @@ FACTORS: dict[str, Callable[[pd.DataFrame], pd.Series]] = {
     # --- Alpha101-style price/volume forms ---------------------------------
     # WQ#101: intraday drive, normalised by the day's range.
     "wq101_intraday": lambda d: (d["Close"] - d["Open"]) / ((d["High"] - d["Low"]) + 0.001),
-    # (dropped wq012_volshock: ICIR 0.021, sign-flipping — noise.)
     # Price-volume correlation: falling correlation precedes reversals.
     "pv_corr_10": lambda d: -d["Close"].rolling(10).corr(d["Volume"]),
 
@@ -113,8 +110,6 @@ FACTORS: dict[str, Callable[[pd.DataFrame], pd.Series]] = {
     "momentum_6_1": lambda d: (d["Close"].shift(21) / d["Close"].shift(126) - 1) * 100,
     # Low-volatility anomaly — lower realised vol has earned better risk-adj returns.
     "low_vol_20": lambda d: -_ret(d).rolling(20).std() * 100,
-    # (dropped amihud_illiq: ICIR 0.023, sign-flipping — liquidity floor
-    # already handled by the per-date eligibility gate anyway.)
     # Negative-skew preference: lottery-like right skew underperforms (Bali 2011).
     "neg_skew_60": lambda d: -_ret(d).rolling(60).skew(),
     # Proximity to the 52-week high — George & Hwang 2004.
@@ -139,14 +134,12 @@ FACTORS: dict[str, Callable[[pd.DataFrame], pd.Series]] = {
     "rsi14_slope5": lambda d: _rsi(d["Close"], 14).diff(5),
 
     # --- MACD family (12,26,9), all normalised by close ---------------------
-    # dropped macd_hist_slope (ICIR -0.004) and macd_hist_rev (0.023, the
-    # redundant inverse of macd_hist) — both dead in run_report.md.
     # Histogram = MACD - signal.  Positive/widening = bullish momentum.
     "macd_hist": lambda d: _macd(d["Close"])[2] / d["Close"] * 100,
     # MACD line itself vs zero — the trend-regime reading.
     "macd_line": lambda d: _macd(d["Close"])[0] / d["Close"] * 100,
 
-    # --- grab-bag additions, untested, just to see what sticks --------------
+    # --- technical indicators, in to test the selection rule itself ---------
     # Bollinger %B(20,2): position within the band, 0=lower band, 1=upper.
     "boll_pctb_20": lambda d: (
         (d["Close"] - (d["Close"].rolling(20).mean() - 2 * d["Close"].rolling(20).std()))
@@ -172,7 +165,6 @@ FACTORS: dict[str, Callable[[pd.DataFrame], pd.Series]] = {
         * 100
     ),
 
-    # --- second grab-bag batch, also untested ------------------------------
     # Williams %R(14): same range as stoch_k_14 but anchored off the high
     # (0 = at the high, -100 = at the low); flipped so higher = better.
     "williams_r_14": lambda d: (
@@ -192,7 +184,6 @@ FACTORS: dict[str, Callable[[pd.DataFrame], pd.Series]] = {
         (_clv(d) * d["Volume"]).rolling(20).sum() / d["Volume"].rolling(20).sum()
     ),
 
-    # --- third grab-bag batch, also untested -------------------------------
     # TRIX(15): triple-smoothed EMA rate of change — a de-noised momentum read.
     "trix_15": lambda d: (
         lambda e: e.pct_change() * 100

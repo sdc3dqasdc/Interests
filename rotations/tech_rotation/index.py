@@ -139,36 +139,31 @@ def build_components(px: pd.DataFrame, fear_greed: pd.Series | None = None) -> p
 
     comps = {}
 
-    # The seed signal: how far the ratio sits above/below its own long trend.
-    # Inverted -- a stretched ratio is a reason to step back, not to pile in.
     comps["valuation"] = -_z(rel - rel.ewm(span=200, min_periods=100).mean())
 
-    # ... and its counterweight.  Six months is the horizon at which relative
-    # momentum persists; without it the valuation leg fights every trend.
+    # Six months is the horizon at which relative momentum persists.
     comps["momentum"] = _z(rel.diff(126))
 
-    # One month, inverted: short-horizon relative moves reverse.
     comps["reversal"] = -_z(rel.diff(21))
 
     comps["regime"] = _regime(steady)
 
-    # Tech leads when it is not the jumpy leg.  A QQQ/SPY vol ratio well above
-    # its norm has marked every tech unwind since 2000.
+    # A QQQ/SPY vol ratio well above its norm has marked every tech unwind
+    # since 2000.
     comps["rel_vol"] = -_z(_realised_vol(tech) / _realised_vol(steady))
 
-    # Long-duration growth is a bet on the discount rate.  TLT up = yields down.
+    # TLT up = yields down = a tailwind for long-duration growth.
     comps["rates"] = _z(np.log(px[dt.LONG_BOND]).diff(63))
 
-    # Credit spread proxy: high yield beating duration-matched Treasuries is
-    # risk appetite, which shows up in the growth leg first.
+    # High yield beating duration-matched Treasuries is risk appetite, which
+    # shows up in the growth leg first.
     comps["credit"] = _z(np.log(px[dt.CREDIT] / px[dt.INT_BOND]).diff(63))
 
-    # Semis lead the tech tape -- an internal confirmation, not a duplicate of
-    # QQQ-vs-SPY momentum.
+    # An internal confirmation, not a duplicate of QQQ-vs-SPY momentum.
     comps["semis"] = _z(np.log(px[dt.SEMIS] / px[dt.TECH]).diff(63))
 
-    # Cap-weighted beating equal-weight = a concentration regime, which is the
-    # kind QQQ wins.  Smallest weight: it is the noisiest of the confirmations.
+    # Cap-weighted beating equal-weight = a concentration regime, the kind QQQ
+    # wins.  Smallest weight: the noisiest of the confirmations.
     comps["concentration"] = _z(np.log(px[dt.STEADY] / px[dt.EQUAL_WT]).diff(63))
 
     # Technical candidate: short-horizon trend confirmation. `momentum` (126d)
@@ -178,12 +173,11 @@ def build_components(px: pd.DataFrame, fear_greed: pd.Series | None = None) -> p
     # `valuation`'s 200-day mean-reversion read on the same ratio.
     comps["trend_50"] = _z(rel - rel.ewm(span=50, min_periods=25).mean())
 
-    # Sentiment candidate: CNN Fear & Greed, contrarian. Signed so unusually
-    # LOW fear-and-greed relative to its own trailing average (panic) favours
-    # the higher-beta leg (Nasdaq), and unusually high (crowded greed) favours
-    # stepping back -- same construction as `reversal`, applied to whole-market
-    # sentiment instead of the QQQ/SPY ratio itself. Data starts 2021-02-01;
-    # dates before that are simply absent, same handling as HYG/RSP above.
+    # Sentiment candidate: CNN Fear & Greed, contrarian -- the `reversal`
+    # construction applied to whole-market sentiment rather than the QQQ/SPY
+    # ratio.  Panic (a low reading against its own trailing average) favours
+    # the higher-beta leg; crowded greed favours stepping back.  Data starts
+    # 2021-02-01; earlier dates are absent, same handling as HYG/RSP above.
     if fear_greed is not None:
         fg = fear_greed.reindex(px.index).ffill()
         comps["sentiment"] = -_z(fg - fg.rolling(252, min_periods=60).mean(), window=504, min_periods=120)
