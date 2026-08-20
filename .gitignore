@@ -1,0 +1,53 @@
+# Environments / editors / caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+*.iml
+.claude/
+.cache/
+
+# Local secrets — never commit. Use screener/.env.example as the template.
+.env
+.env.local
+
+# ---- screener/ generated outputs ----
+screener/short_term_candidates.csv
+screener/rejected_companies.csv
+screener/fundamentals_cache.json
+screener/screener_universe.txt
+screener/sentiment_universe.txt
+screener/top_candidates.csv
+screener/roi_report.csv
+screener/win_rate_picks.csv
+screener/backtest_trades.csv
+screener/backtest_equity.csv
+screener/backtest_equity.png
+screener/fg_trades.csv
+screener/fg_equity.csv
+screener/fg_equity.png
+screener/alpha_report.csv
+screener/alpha_selection.json
+screener/run_report.csv
+screener/run_report.md
+screener/run_report.csv.lock
+screener/paper_positions.json
+
+# A/B sweep outputs from win_rate_tester experiments
+screener/wr_*.csv
+screener/wr_*.log
+screener/stop_*.csv
+screener/stop_*.log
+screener/trail_*.csv
+screener/trail_*.log
+screener/alpha_report_*.csv
+screener/alpha_selection_*.json
+screener/ab_sweep.csv
+screener/ab_sweep.log
+
+# ---- rotations/ generated outputs ----
+rotations/**/*.png
+rotations/tech_rotation/nti_history.csv
+rotations/china_rotation/kdi_history.csv
