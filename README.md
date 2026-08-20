@@ -4,8 +4,8 @@ Three systematic equity projects I built around one question: given a pile of
 plausible signals, which ones do I actually keep?
 
 I use a different selection procedure in each folder because the statistical
-setting is different. This README covers those procedures and the math, the
-per-project READMEs cover mechanics.
+setting is different. This README covers those procedures and the math, like
+the per-project READMEs cover mechanics.
 
 | Folder | Setting | How I select |
 |---|---|---|
@@ -51,8 +51,8 @@ print cannot move my clip bounds, which is exactly what a mean/std
 winsorization would let it do.
 
 First I clean the bars (non-positive volume or price, `high < low`, non-finite
-values, and frozen runs of $\ge 5$ identical closes, which are halts and stale
-feeds masquerading as data), and apply a per-date eligibility gate ($P \ge \$5$,
+values, and frozen runs of $\ge 5$ identical closes, like halts and stale feeds
+masquerading as data), and apply a per-date eligibility gate ($P \ge \$5$,
 dollar volume $\ge \$1\mathrm{M}$) so illiquid names can't dominate a
 cross-section I could never have traded.
 
@@ -126,16 +126,16 @@ Measured on 2021-01-01 to 2026-07-21, $h=50$, 269 sampled cross-sections:
 | `rsi14_near50` | −0.088 | −0.0082 | −1.44 | 46.8 | 0.004 to −0.021 | **sign flip** |
 | `macd_hist` | −0.006 | −0.0008 | −0.10 | 49.4 | −0.009 to 0.008 | **sign flip** |
 
-Most of the RSI and MACD family, the indicators a discretionary screen leans on
-hardest, sit at $\lvert\mathrm{ICIR}\rvert < 0.1$ **and** flip sign between
-halves. I read that as the signature of an effect that was never there.
+Most of the RSI and MACD family, like the indicators a discretionary screen
+leans on hardest, sit at $\lvert\mathrm{ICIR}\rvert < 0.1$ **and** flip sign
+between halves. I read that as the signature of an effect that was never there.
 
 ### 1.4 Three things I know are wrong with this procedure
 
 **My t-stats are inflated by overlap.** $t = \mathrm{ICIR}\sqrt{T}$ assumes
 independent observations. With $h = 50$ trading days of forward return sampled
 every 5 sessions each observation shares roughly $50/5 = 10$ neighbours'
-returns, so under a Hansen-Hodrick or Newey-West style correction my effective
+returns, so under a correction like Hansen-Hodrick or Newey-West my effective
 sample is closer to $T/10$ and the honest scale is $t/\sqrt{10}$:
 
 | factor | naive $t$ | overlap-adjusted $t$ |
@@ -151,8 +151,8 @@ $\alpha = 0.05$ expects $29 \times 0.05 \approx 1.5$ false discoveries just by
 construction. A Bonferroni threshold of $0.05/29$ needs $\lvert t\rvert
 \gtrsim 3.1$ and *nothing in my pool clears that once overlap is accounted
 for*, so I don't treat any of these as established alpha. They are ranking
-ingredients whose value gets settled downstream by the portfolio backtest,
-which models position limits, rebalancing, costs and compounding. That arbiter
+ingredients whose value gets settled downstream by the portfolio backtest, like
+it models position limits, rebalancing, costs and compounding. That arbiter
 has overruled my per-pick sweep before, which is why
 [`screener/ab_sweep.py`](screener/ab_sweep.py) warns about its own metric.
 
@@ -167,8 +167,8 @@ $$
 $$
 
 but with two of them nearly collinear the real figure is lower. A
-correlation-aware step, clustering the pool and keeping one representative per
-cluster, or a full $\Sigma^{-1}$ weighting, is my next iteration.
+correlation-aware step, like clustering the pool and keeping one representative
+per cluster, or a full $\Sigma^{-1}$ weighting, is my next iteration.
 
 ### 1.5 From factors to a score
 
@@ -213,9 +213,9 @@ two files disagree by design.
 
 The [rotation indices](rotations/) put me in the opposite position. There is no
 cross-section, one spread and one observation per day, so IC isn't available to
-me, and $T$ is small in the units that matter, leadership regimes last years so
-25 years of daily data is maybe a handful of independent events. If I fitted
-weights here I would be curve-fitting with extra steps.
+me, and $T$ is small in the units that matter, like leadership regimes last
+years so 25 years of daily data is maybe a handful of independent events. If I
+fitted weights here I would be curve-fitting with extra steps.
 
 So I set the weights a priori by role and never fit them. The two deliberately
 disagreeing views (valuation vs momentum) and the regime gate get 1.00, the
@@ -231,10 +231,11 @@ that with a `--selftest` lookahead check. I clip at $3\sigma$ because March
 2000 and March 2020 are 6 to 8 sigma events that would otherwise let one day
 set my scale for a decade.
 
-The composite is a weight-renormalised mean over whichever components exist
-(HYG lists in 2007, and every z needs two years of warm-up), then **re-scaled
-by its own trailing standard deviation**. That second step isn't cosmetic. For
-$n$ standardised components with average pairwise correlation $\rho$,
+The composite is a weight-renormalised mean over whichever components exist,
+like HYG only lists in 2007 and every z needs two years of warm-up, then it
+gets **re-scaled by its own trailing standard deviation**. That second step
+isn't cosmetic. For $n$ standardised components with average pairwise
+correlation $\rho$,
 
 $$
 \mathrm{sd}\left(\frac{1}{n}\sum_i z_i\right)
@@ -248,9 +249,10 @@ threshold means anything at all.
 
 **I select by leave-one-out ablation, judged on both halves.** For every
 component I rebuild the index without it, and run it alone, and measure Sharpe
-over a common window (measuring a HYG-only variant from HYG's own 2007
-inception would skip the dot-com bust and flatter it). I keep a component only
-if dropping it hurts **in both halves** (1999 to 2012 and 2013 to now).
+over a common window (measuring something like a HYG-only variant from HYG's
+own 2007 inception would skip the dot-com bust and flatter it). I keep a
+component only if dropping it hurts **in both halves** (1999 to 2012 and 2013
+to now).
 Survivors keep their original relative weights so I re-fit nothing.
 
 On US data (QQQ vs SPY) that leaves **regime, momentum, rel_vol, rates**, and
