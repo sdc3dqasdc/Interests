@@ -1,7 +1,7 @@
 # Quant Research
 
-Three systematic equity projects I built around one question, given a pile of
-plausible signals which ones do I actually keep?
+The three projects I built around one question, given a pile of
+possible signals which ones do I actually keep?
 
 I use a different selection procedure in each folder because the statistical
 setting is different. This README covers those procedures and the math like the
