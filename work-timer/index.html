@@ -4,312 +4,814 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Work Timer</title>
+<link rel="icon" id="favicon" href="data:,">
 <style>
   :root {
-    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70;
-    --line: #e2e0db; --work: #c2410c; --break: #15803d; --accent: #2563eb;
+    --bg: #f4f2ee; --surface: #ffffff; --surface-2: #f8f7f4; --ink: #1c1b1a; --muted: #75716b;
+    --faint: #a8a39b; --line: #e6e2db; --accent: #3b5bdb; --accent-ink: #ffffff;
+    --work: #d9480f; --work-tint: #fbeee6; --break: #2b8a3e; --break-tint: #e8f4ea; --on-phase: #ffffff;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06); --radius: 12px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #141416; --panel: #1d1d20; --ink: #ececee; --muted: #9a9aa2;
-      --line: #2e2e33; --work: #fb923c; --break: #4ade80; --accent: #60a5fa;
+      --bg: #121214; --surface: #1b1b1e; --surface-2: #222226; --ink: #eceae6; --muted: #9b978f;
+      --faint: #6b6862; --line: #2d2d31; --accent: #748ffc; --accent-ink: #0d0d10;
+      --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #141416; --panel: #1d1d20; --ink: #ececee; --muted: #9a9aa2;
-    --line: #2e2e33; --work: #fb923c; --break: #4ade80; --accent: #60a5fa;
+    --bg: #121214; --surface: #1b1b1e; --surface-2: #222226; --ink: #eceae6; --muted: #9b978f;
+    --faint: #6b6862; --line: #2d2d31; --accent: #748ffc; --accent-ink: #0d0d10;
+    --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3);
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 14.5px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  .app { display: grid; grid-template-columns: 1fr 360px; min-height: 100vh; }
-  main { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 16px; gap: 18px; }
-  aside { background: var(--panel); border-left: 1px solid var(--line); padding: 20px 16px; overflow-y: auto; max-height: 100vh; }
-  @media (max-width: 820px) {
-    .app { grid-template-columns: 1fr; }
-    aside { border-left: 0; border-top: 1px solid var(--line); max-height: none; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  .app { display: grid; grid-template-columns: minmax(0, 1fr) 380px; height: 100vh; }
+  .app.focus { grid-template-columns: 1fr 0; }
+  .app.focus aside { display: none; }
+
+  main {
+    position: relative; display: flex; flex-direction: column; min-width: 0;
+    background: var(--tint); transition: background .6s ease;
   }
-  .phase { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; }
-  .phase.work { color: var(--work); } .phase.break { color: var(--break); }
-  .ring { position: relative; width: min(320px, 80vw); aspect-ratio: 1; }
+  main.work { --tint: var(--work-tint); --phase: var(--work); }
+  main.break { --tint: var(--break-tint); --phase: var(--break); }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; gap: 8px; }
+  .brand { font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+  .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--phase); transition: background .6s; }
+  .iconbar { display: flex; gap: 4px; }
+  .icon-btn {
+    display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
+    border: 0; background: transparent; color: var(--muted);
+  }
+  .icon-btn:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); color: var(--ink); }
+
+  .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 8px 16px 40px; }
+  .modes { display: inline-flex; background: color-mix(in srgb, var(--surface) 70%, transparent); border-radius: 999px; padding: 4px; gap: 2px; box-shadow: var(--shadow); }
+  .modes button { border: 0; background: transparent; padding: 6px 16px; border-radius: 999px; color: var(--muted); font-weight: 550; font-size: 13.5px; }
+  .modes button.on { background: var(--phase); color: var(--on-phase); }
+
+  .ring { position: relative; width: min(340px, 78vw); aspect-ratio: 1; }
   .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-  .ring circle { fill: none; stroke-width: 10; }
-  .ring .track { stroke: var(--line); }
-  .ring .bar { stroke-linecap: round; transition: stroke-dashoffset .5s linear; }
-  .clock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .time { font-size: clamp(48px, 14vw, 72px); font-variant-numeric: tabular-nums; font-weight: 300; }
-  .cycle { color: var(--muted); font-size: 13px; }
-  .current { font-size: 16px; text-align: center; min-height: 24px; color: var(--muted); }
-  .current b { color: var(--ink); font-weight: 600; }
-  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-  button {
-    font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  .ring circle { fill: none; stroke-width: 6; }
+  .ring .track { stroke: color-mix(in srgb, var(--phase) 16%, transparent); }
+  .ring .bar { stroke: var(--phase); stroke-linecap: round; transition: stroke-dashoffset .9s linear, stroke .6s; }
+  .clock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .time { font-size: clamp(56px, 17vw, 84px); font-weight: 250; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .sub { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .pips { display: flex; gap: 6px; margin-top: 8px; }
+  .pip { width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--phase) 22%, transparent); }
+  .pip.on { background: var(--phase); }
+
+  .now {
+    display: flex; align-items: center; gap: 8px; max-width: min(440px, 92vw);
+    background: var(--surface); border-radius: 999px; padding: 8px 8px 8px 16px; box-shadow: var(--shadow);
   }
-  button:hover { border-color: var(--muted); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.small { padding: 4px 10px; font-size: 13px; }
-  h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 20px 0 8px; }
-  h2:first-child { margin-top: 0; }
-  .row { display: flex; gap: 6px; }
-  input[type=text], textarea {
-    font: inherit; width: 100%; padding: 7px 9px; border: 1px solid var(--line);
-    border-radius: 8px; background: var(--bg); color: var(--ink);
+  .now .lbl { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .now select { border: 0; background: transparent; font-weight: 600; min-width: 0; max-width: 300px; text-overflow: ellipsis; outline: none; padding: 2px 4px; }
+
+  .controls { display: flex; align-items: center; gap: 18px; }
+  .play {
+    width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--phase); color: var(--on-phase);
+    display: grid; place-items: center; box-shadow: 0 6px 20px color-mix(in srgb, var(--phase) 40%, transparent);
+    transition: transform .12s, background .6s;
   }
-  textarea { font-family: ui-monospace, Menlo, monospace; font-size: 12px; min-height: 90px; resize: vertical; }
-  ul { list-style: none; margin: 0; padding: 0; }
-  .task { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
-  .task:hover { background: var(--bg); }
-  .task.active { outline: 2px solid var(--accent); }
-  .task.done .name { text-decoration: line-through; color: var(--muted); }
-  .task .name { flex: 1; overflow-wrap: anywhere; }
-  .task .mins { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .task .x { border: 0; background: none; color: var(--muted); padding: 0 4px; }
-  .log li { font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
-  .log .t { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
-  .stat .v { font-size: 20px; font-variant-numeric: tabular-nums; }
-  .stat .k { font-size: 12px; color: var(--muted); }
-  .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .msg { font-size: 12px; color: var(--muted); min-height: 16px; margin-top: 4px; }
+  .play:hover { transform: scale(1.04); } .play:active { transform: scale(.97); }
+  .play svg.i { width: 28px; height: 28px; fill: currentColor; stroke: none; }
+  .ctl { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--surface); color: var(--muted); display: grid; place-items: center; box-shadow: var(--shadow); }
+  .ctl:hover { color: var(--ink); }
+  .hint { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; color: var(--faint); font-size: 12px; }
+  kbd { font: 11px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--surface); color: var(--muted); }
+
+  aside { background: var(--surface); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .tabs { display: flex; gap: 2px; padding: 12px 12px 0; border-bottom: 1px solid var(--line); }
+  .tabs button { border: 0; background: none; padding: 8px 12px 10px; color: var(--muted); font-weight: 550; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+  .pane { display: none; padding: 16px; overflow-y: auto; flex: 1; }
+  .pane.on { display: block; }
+  h3 { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 20px 0 8px; font-weight: 600; }
+  h3:first-child { margin-top: 0; }
+
+  .add { display: flex; gap: 6px; }
+  .field { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); outline: none; }
+  .field:focus { border-color: var(--accent); background: var(--surface); }
+  .est { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+  .est button { border: 0; background: none; width: 26px; height: 100%; color: var(--muted); }
+  .est span { min-width: 34px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .add-hint { font-size: 12px; color: var(--faint); margin: 6px 2px 0; }
+
+  .tasks { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .task {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start;
+    padding: 10px 10px 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface);
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .task:hover { border-color: color-mix(in srgb, var(--ink) 18%, transparent); }
+  .task.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .task.dragging { opacity: .4; }
+  .task.over { border-top: 2px solid var(--accent); }
+  .check { width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 1.5px solid var(--faint); background: none; padding: 0; display: grid; place-items: center; color: transparent; }
+  .check:hover { border-color: var(--break); }
+  .task.done .check { background: var(--break); border-color: var(--break); color: #fff; }
+  .check svg.i { width: 12px; height: 12px; stroke-width: 3; }
+  .task .body { min-width: 0; }
+  .task .name { overflow-wrap: anywhere; font-weight: 500; outline: none; }
+  .task.done .name { text-decoration: line-through; color: var(--faint); }
+  .task .notes { font-size: 12.5px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+  .task .meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .progress { flex: 1; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; max-width: 140px; }
+  .progress i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .progress.over i { background: var(--work); }
+  .task .del { opacity: 0; border: 0; background: none; color: var(--faint); padding: 2px; border-radius: 6px; }
+  .task:hover .del { opacity: 1; } .task .del:hover { color: var(--work); }
+  .empty { color: var(--faint); text-align: center; padding: 28px 8px; font-size: 13px; }
+  .row-actions { display: flex; justify-content: space-between; margin-top: 12px; }
+  .link { border: 0; background: none; color: var(--muted); font-size: 12.5px; padding: 4px 2px; }
+  .link:hover { color: var(--ink); text-decoration: underline; }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+  .tile .v { font-size: 22px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .tile .k { font-size: 12px; color: var(--muted); }
+  .chart { width: 100%; height: 150px; display: block; }
+  .chart text { fill: var(--muted); font-size: 10px; }
+  .bars { display: flex; flex-direction: column; gap: 8px; }
+  .bars .b { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 13px; }
+  .bars .b .track { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 6px; overflow: hidden; }
+  .bars .b .track i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+  .bars .b .m { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .day { margin-bottom: 14px; }
+  .day-h { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+  .entry { display: grid; grid-template-columns: 10px 1fr auto; gap: 2px 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: baseline; }
+  .entry .d { width: 8px; height: 8px; border-radius: 50%; background: var(--work); align-self: center; }
+  .entry.brk .d { background: var(--break); } .entry.brk { color: var(--faint); }
+  .entry .t { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+  .entry .note { grid-column: 2 / -1; color: var(--muted); font-size: 12.5px; cursor: text; }
+  .entry .note:empty::before { content: "+ add note"; color: var(--faint); }
+  .entry .note:focus { outline: none; color: var(--ink); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); padding: 7px 12px; border-radius: 10px; font-size: 13px; }
+  .btn:hover { border-color: color-mix(in srgb, var(--ink) 25%, transparent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn svg.i { width: 15px; height: 15px; }
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  textarea.field { font: 12px/1.5 ui-monospace, Menlo, monospace; min-height: 110px; resize: vertical; }
+  .muted { color: var(--muted); font-size: 12.5px; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+  pre { background: var(--surface-2); border-radius: 8px; padding: 10px; font-size: 11.5px; overflow-x: auto; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: none; padding: 4px 10px; font-size: 12.5px; color: var(--muted); }
+  .seg button.on { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+
+  dialog { border: 0; border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.25); width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  .dlg { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .dlg h2 { margin: 0; font-size: 17px; }
+  .dlg .foot { display: flex; justify-content: flex-end; gap: 8px; }
+  .set { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .set input[type=number] { width: 72px; text-align: right; }
+  .switch { appearance: none; width: 36px; height: 20px; border-radius: 20px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .switch:checked { background: var(--accent); } .switch:checked::after { left: 18px; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 13.5px; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-size: 13px; transition: .2s; pointer-events: none; z-index: 10; }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 860px) {
+    .app, .app.focus { grid-template-columns: 1fr; height: auto; }
+    main { min-height: 92vh; }
+    aside { border-left: 0; border-top: 1px solid var(--line); }
+    .pane { overflow: visible; }
+    .hint { display: none; }
+  }
 </style>
 </head>
 <body>
-<div class="app">
-  <main>
-    <div class="phase work" id="phase">Work</div>
-    <div class="ring">
-      <svg viewBox="0 0 120 120">
-        <circle class="track" cx="60" cy="60" r="54"/>
-        <circle class="bar" id="bar" cx="60" cy="60" r="54"/>
-      </svg>
-      <div class="clock">
-        <div class="time" id="time">40:00</div>
-        <div class="cycle" id="cycle">Cycle 1</div>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5l10 7-10 7z"/><path d="M19 5v14"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M6 10l6 6 6-6M4 20h16"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M12 20V8M6 14l6-6 6 6M4 4h16"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <main id="main" class="work">
+    <div class="topbar">
+      <div class="brand"><span class="dot"></span>Work Timer</div>
+      <div class="iconbar">
+        <button class="icon-btn" id="keysBtn" title="Shortcuts (?)"><svg class="i"><use href="#i-key"/></svg></button>
+        <button class="icon-btn" id="themeBtn" title="Theme"><svg class="i"><use href="#i-moon"/></svg></button>
+        <button class="icon-btn" id="settingsBtn" title="Settings"><svg class="i"><use href="#i-gear"/></svg></button>
+        <button class="icon-btn" id="panelBtn" title="Focus mode (F)"><svg class="i"><use href="#i-panel"/></svg></button>
       </div>
     </div>
-    <div class="current" id="current">No task selected</div>
-    <div class="controls">
-      <button class="primary" id="startBtn">Start</button>
-      <button id="skipBtn">Skip phase</button>
-      <button id="resetBtn">Reset</button>
+
+    <div class="stage">
+      <div class="modes">
+        <button id="modeWork">Work</button>
+        <button id="modeBreak">Break</button>
+      </div>
+
+      <div class="ring">
+        <svg viewBox="0 0 120 120">
+          <circle class="track" cx="60" cy="60" r="56"/>
+          <circle class="bar" id="bar" cx="60" cy="60" r="56"/>
+        </svg>
+        <div class="clock">
+          <div class="time" id="time">40:00</div>
+          <div class="sub" id="sub">Cycle 1</div>
+          <div class="pips" id="pips"></div>
+        </div>
+      </div>
+
+      <div class="now">
+        <span class="lbl">Working on</span>
+        <select id="taskSelect"></select>
+      </div>
+
+      <div class="controls">
+        <button class="ctl" id="resetBtn" title="Restart phase (R)"><svg class="i"><use href="#i-reset"/></svg></button>
+        <button class="play" id="startBtn" title="Start / pause (Space)"><svg class="i"><use id="playIcon" href="#i-play"/></svg></button>
+        <button class="ctl" id="skipBtn" title="Skip to next phase (S)"><svg class="i"><use href="#i-skip"/></svg></button>
+      </div>
     </div>
+    <div class="hint"><kbd>Space</kbd> start/pause · <kbd>S</kbd> skip · <kbd>N</kbd> new task · <kbd>?</kbd> all shortcuts</div>
   </main>
 
   <aside>
-    <h2>Today</h2>
-    <div class="stats">
-      <div class="stat"><div class="v" id="statWork">0m</div><div class="k">focused</div></div>
-      <div class="stat"><div class="v" id="statCycles">0</div><div class="k">cycles done</div></div>
+    <div class="tabs" id="tabs">
+      <button data-tab="tasks">Tasks</button>
+      <button data-tab="log">Log</button>
+      <button data-tab="stats">Stats</button>
+      <button data-tab="claude">Claude</button>
     </div>
 
-    <h2>Tasks</h2>
-    <div class="row">
-      <input type="text" id="taskInput" placeholder="Add a task, press Enter">
-    </div>
-    <ul id="tasks" style="margin-top:8px"></ul>
+    <section class="pane" data-pane="tasks">
+      <div class="add">
+        <input class="field" id="taskInput" placeholder="What are you working on?" autocomplete="off">
+        <div class="est" title="Estimated cycles">
+          <button id="estDown">−</button><span id="estVal">1×</span><button id="estUp">+</button>
+        </div>
+      </div>
+      <div class="add-hint">Enter to add · click a task to focus it · double-click to rename · drag to reorder</div>
+      <ul class="tasks" id="tasks"></ul>
+      <div class="row-actions">
+        <span class="muted" id="taskSummary"></span>
+        <button class="link" id="clearDone">Clear finished</button>
+      </div>
+    </section>
 
-    <h2>Session log</h2>
-    <ul class="log" id="log"></ul>
+    <section class="pane" data-pane="log">
+      <div id="log"></div>
+    </section>
 
-    <h2>Claude</h2>
-    <div class="btns">
-      <button class="small" id="copyBtn">Copy log for Claude</button>
-      <button class="small" id="exportBtn">Download JSON</button>
-    </div>
-    <textarea id="importBox" style="margin-top:8px" placeholder='Paste JSON from Claude, e.g. {"tasks":[{"name":"Read chapter 3"}]}'></textarea>
-    <div class="btns">
-      <button class="small" id="importBtn">Import</button>
-      <label class="small" style="font-size:13px;color:var(--muted);align-self:center">
-        <input type="checkbox" id="replaceChk"> replace existing tasks
-      </label>
-    </div>
-    <div class="msg" id="msg"></div>
+    <section class="pane" data-pane="stats">
+      <div class="tiles">
+        <div class="tile"><div class="v" id="stToday">0m</div><div class="k">focused today</div></div>
+        <div class="tile"><div class="v" id="stCycles">0</div><div class="k">cycles today</div></div>
+        <div class="tile"><div class="v" id="stWeek">0h</div><div class="k">last 7 days</div></div>
+        <div class="tile"><div class="v" id="stStreak">0</div><div class="k">day streak</div></div>
+      </div>
+      <h3>Last 7 days</h3>
+      <svg class="chart" id="chart"></svg>
+      <h3>Today by task</h3>
+      <div class="bars" id="byTask"></div>
+    </section>
+
+    <section class="pane" data-pane="claude">
+      <h3>Send to Claude</h3>
+      <div class="stack">
+        <div class="wrap">
+          <span class="muted">Range</span>
+          <div class="seg" id="rangeSeg"><button data-r="1">Today</button><button data-r="7">7 days</button><button data-r="0">All</button></div>
+        </div>
+        <div class="wrap">
+          <button class="btn primary" id="copyBtn"><svg class="i"><use href="#i-copy"/></svg>Copy log for Claude</button>
+          <button class="btn" id="exportBtn"><svg class="i"><use href="#i-down"/></svg>JSON</button>
+        </div>
+        <button class="btn" id="promptBtn" style="align-self:flex-start"><svg class="i"><use href="#i-copy"/></svg>Copy a planning prompt</button>
+        <div class="muted">The planning prompt asks Claude to break your goal into 40-minute tasks and reply in the format below.</div>
+      </div>
+
+      <h3>Import from Claude</h3>
+      <div class="stack">
+        <textarea class="field" id="importBox" placeholder='Paste Claude&apos;s reply or JSON here, e.g. {"tasks":[{"name":"Read chapter 3","estimate":40}]}'></textarea>
+        <div class="wrap" style="justify-content:space-between">
+          <label class="wrap muted"><input type="checkbox" class="switch" id="replaceChk"> Replace current tasks</label>
+          <button class="btn primary" id="importBtn"><svg class="i"><use href="#i-in"/></svg>Import</button>
+        </div>
+        <details>
+          <summary>Accepted format and other ways in</summary>
+<pre>{
+  "tasks": [
+    { "name": "Read chapter 3", "estimate": 40,
+      "notes": "optional" },
+    "A bare string works too"
+  ],
+  "activeTask": "Read chapter 3"
+}</pre>
+          <div class="muted">You can also drop a .json file onto this page, open <code>index.html#import=&lt;encoded JSON&gt;</code>, or serve the folder and open <code>index.html?load=tasks.json</code>.</div>
+        </details>
+      </div>
+    </section>
   </aside>
 </div>
 
+<dialog id="noteDlg">
+  <form method="dialog" class="dlg">
+    <h2 id="noteTitle">Work block done</h2>
+    <div class="muted" id="noteSub">What did you get done? This goes into the log Claude reads.</div>
+    <textarea class="field" id="noteText" rows="3" style="font:inherit;min-height:80px" placeholder="e.g. Finished Q1-Q3, stuck on Q4"></textarea>
+    <label class="wrap muted"><input type="checkbox" class="switch" id="noteDone"> Mark task as finished</label>
+    <div class="foot"><button class="btn" value="skip">Skip</button><button class="btn primary" value="save">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="settingsDlg">
+  <form method="dialog" class="dlg">
+    <h2>Settings</h2>
+    <div class="set"><span>Work minutes</span><input class="field" type="number" min="1" max="180" id="setWork"></div>
+    <div class="set"><span>Break minutes</span><input class="field" type="number" min="1" max="60" id="setBreak"></div>
+    <div class="set"><span>Start breaks automatically</span><input type="checkbox" class="switch" id="setAutoBreak"></div>
+    <div class="set"><span>Start work automatically after a break</span><input type="checkbox" class="switch" id="setAutoWork"></div>
+    <div class="set"><span>Ask for a note after each work block</span><input type="checkbox" class="switch" id="setAskNote"></div>
+    <div class="set"><span>Sound</span><input type="checkbox" class="switch" id="setSound"></div>
+    <div class="set"><span>Desktop notifications</span><input type="checkbox" class="switch" id="setNotify"></div>
+    <div class="muted">Duration changes apply from the next phase.</div>
+    <h3 style="margin:6px 0 0">Focus &amp; site blocking</h3>
+    <div class="muted">When a work block starts and ends, run an Apple Shortcut (by name) or open a link such as <code>worktimer://block</code> on Windows. Leave blank to disable. One-time setup is in the README.</div>
+    <div class="wrap"><span class="muted">Fill in for</span><button type="button" class="btn" id="fillMac">Mac / iPhone</button><button type="button" class="btn" id="fillWin">Windows</button></div>
+    <div class="set"><span>On work start</span><input class="field" id="setSCWork" placeholder="Shortcut name or URL" style="width:200px"></div>
+    <div class="set"><span>On break start</span><input class="field" id="setSCBreak" placeholder="Shortcut name or URL" style="width:200px"></div>
+    <div class="wrap"><button type="button" class="btn" id="testSC">Test work start</button><button type="button" class="btn" id="testSCB">Test break start</button></div>
+    <div class="foot"><button class="link" value="wipe" id="wipeBtn" style="margin-right:auto">Erase all data</button><button class="btn primary" value="ok">Done</button></div>
+  </form>
+</dialog>
+
+<dialog id="keysDlg">
+  <form method="dialog" class="dlg">
+    <h2>Keyboard shortcuts</h2>
+    <div class="keys">
+      <kbd>Space</kbd><span>Start / pause</span>
+      <kbd>S</kbd><span>Skip to next phase</span>
+      <kbd>R</kbd><span>Restart current phase</span>
+      <kbd>N</kbd><span>New task</span>
+      <kbd>J</kbd><span>Focus next unfinished task</span>
+      <kbd>D</kbd><span>Mark focused task finished</span>
+      <kbd>F</kbd><span>Focus mode (hide side panel)</span>
+      <kbd>1–4</kbd><span>Switch side panel tab</span>
+      <kbd>C</kbd><span>Copy log for Claude</span>
+      <kbd>?</kbd><span>This list</span>
+    </div>
+    <div class="foot"><button class="btn primary">Close</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
 <script>
 (() => {
-  const WORK = 40 * 60, BREAK = 10 * 60;
   const KEY = "work-timer-v1";
-  const C = 2 * Math.PI * 54;
+  const R = 56, C = 2 * Math.PI * R;
+  const $ = id => document.getElementById(id);
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const dayKey = d => { d = new Date(d); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+  const hm = iso => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const fmt = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+  const dur = sec => { const m = Math.round(sec / 60); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
 
-  const load = () => {
-    try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; }
+  // ---------- state ----------
+  const defaults = {
+    settings: { work: 40, brk: 10, autoBreak: true, autoWork: false, askNote: true, sound: true, notify: true, scWork: "", scBreak: "" },
+    tasks: [], sessions: [], activeTask: null,
+    phase: "work", cycle: 1, total: 40 * 60, remaining: 40 * 60, endsAt: null, phaseStart: null, sliceOffset: 0,
+    ui: { tab: "tasks", theme: "auto", focus: false, est: 1, range: 1 },
   };
-  const fresh = () => ({ tasks: [], sessions: [], activeTask: null,
-    phase: "work", cycle: 1, remaining: WORK, endsAt: null, phaseStart: null });
-  let s = Object.assign(fresh(), load() || {});
+  let s;
+  try { s = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { s = {}; }
+  s = { ...structuredClone(defaults), ...s };
+  s.settings = { ...defaults.settings, ...s.settings };
+  s.ui = { ...defaults.ui, ...s.ui };
+  if (!s.total) s.total = (s.phase === "work" ? s.settings.work : s.settings.brk) * 60;
+  s.sessions.forEach(x => { if (!x.id) x.id = uid(); });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
 
-  const $ = id => document.getElementById(id);
-  const uid = () => Math.random().toString(36).slice(2, 9);
-  const fmt = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
-  const hm = iso => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const today = () => new Date().toDateString();
-  const taskName = id => (s.tasks.find(t => t.id === id) || {}).name || null;
+  const phaseLen = p => (p === "work" ? s.settings.work : s.settings.brk) * 60;
+  const task = id => s.tasks.find(t => t.id === id);
+  const taskName = id => (task(id) || {}).name || null;
+  const workSecs = id => s.sessions.reduce((a, x) => a + (x.type === "work" && x.taskId === id ? x.seconds : 0), 0);
+  const elapsed = () => s.total - s.remaining - (s.sliceOffset || 0);
 
-  // Recorded minutes per task come from logged work sessions, so the log is the single source of truth.
-  const minutesFor = id => Math.round(s.sessions.filter(x => x.type === "work" && x.taskId === id)
-    .reduce((a, x) => a + x.seconds, 0) / 60);
-
+  // ---------- timer ----------
   function logSession(type, seconds, completed) {
-    if (seconds < 30) return;
-    s.sessions.push({ type, taskId: type === "work" ? s.activeTask : null,
+    if (seconds < 30) return null;
+    const x = { id: uid(), type, taskId: type === "work" ? s.activeTask : null,
       task: type === "work" ? taskName(s.activeTask) : null,
-      start: s.phaseStart, end: new Date().toISOString(), seconds, completed });
+      start: s.phaseStart || new Date(Date.now() - seconds * 1000).toISOString(),
+      end: new Date().toISOString(), seconds, completed, note: "" };
+    s.sessions.push(x);
+    return x;
   }
 
-  function elapsed() {
-    const total = s.phase === "work" ? WORK : BREAK;
-    return total - s.remaining - (s.sliceOffset || 0);
-  }
-
-  function nextPhase(completed) {
-    logSession(s.phase, elapsed(), completed);
+  function finishPhase(completed) {
+    const wasRunning = !!s.endsAt, started = !!s.phaseStart, from = s.phase;
+    const logged = logSession(from, elapsed(), completed);
     s.sliceOffset = 0;
-    if (s.phase === "work") { s.phase = "break"; s.remaining = BREAK; }
-    else { s.phase = "work"; s.remaining = WORK; s.cycle++; }
-    s.phaseStart = new Date().toISOString();
-    if (s.endsAt) s.endsAt = Date.now() + s.remaining * 1000;
-    if (completed) notify();
+    if (from === "break") s.cycle++;
+    s.phase = from === "work" ? "break" : "work";
+    s.total = s.remaining = phaseLen(s.phase);
+    const auto = s.phase === "break" ? s.settings.autoBreak : s.settings.autoWork;
+    const run = wasRunning && auto;
+    s.endsAt = run ? Date.now() + s.total * 1000 : null;
+    s.phaseStart = run ? new Date().toISOString() : null;
+    if (completed) alertPhase();
+    if (from === "work" && started) runShortcut("break");
+    else if (run && s.phase === "work") runShortcut("work");
     save(); render();
-  }
-
-  function notify() {
-    const text = s.phase === "break" ? "Work block done. Take 10 minutes." : "Break over. Back to work.";
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.25, 0.5].forEach(t => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.frequency.value = s.phase === "break" ? 660 : 880;
-        g.gain.setValueAtTime(0.15, ctx.currentTime + t);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.2);
-        o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.2);
-      });
-    } catch {}
-    if ("Notification" in window && Notification.permission === "granted") new Notification("Work Timer", { body: text });
+    if (completed && from === "work" && logged && s.settings.askNote) askNote(logged);
   }
 
   function tick() {
     if (!s.endsAt) return;
-    s.remaining = Math.max(0, Math.round((s.endsAt - Date.now()) / 1000));
-    if (s.remaining === 0) nextPhase(true);
-    else renderClock();
+    const r = Math.max(0, Math.ceil((s.endsAt - Date.now()) / 1000));
+    if (r !== s.remaining) { s.remaining = r; renderClock(); }
+    if (r === 0) finishPhase(true);
   }
 
   function start() {
-    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
-    if (!s.phaseStart) s.phaseStart = new Date().toISOString();
+    if (s.settings.notify && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+    unlockAudio();
+    const fresh = !s.phaseStart;
+    if (fresh) s.phaseStart = new Date().toISOString();
     s.endsAt = Date.now() + s.remaining * 1000;
+    if (fresh && s.phase === "work") runShortcut("work");
     save(); render();
   }
   function pause() { tick(); s.endsAt = null; save(); render(); }
+  const toggle = () => (s.endsAt ? pause() : start());
+  function skip() { tick(); finishPhase(false); }
+  function restart() {
+    tick();
+    if (s.phaseStart) logSession(s.phase, elapsed(), false);
+    Object.assign(s, { remaining: s.total, endsAt: s.endsAt ? Date.now() + s.total * 1000 : null,
+      phaseStart: s.endsAt ? new Date().toISOString() : null, sliceOffset: 0 });
+    save(); render(); toast("Phase restarted");
+  }
+  function switchMode(p) {
+    if (p === s.phase) return;
+    tick();
+    if (s.phaseStart) logSession(s.phase, elapsed(), false);
+    if (s.phase === "work" && s.phaseStart) runShortcut("break");
+    Object.assign(s, { phase: p, total: phaseLen(p), remaining: phaseLen(p), endsAt: null, phaseStart: null, sliceOffset: 0 });
+    save(); render();
+  }
+
+  // Changing task mid-block closes the current slice so the minutes go to the right task.
+  function setActive(id) {
+    if (id === s.activeTask) return;
+    if (s.phase === "work" && s.phaseStart) {
+      tick();
+      const e = elapsed();
+      logSession("work", e, false);
+      s.sliceOffset = (s.sliceOffset || 0) + e;
+      s.phaseStart = new Date().toISOString();
+    }
+    s.activeTask = id; save(); render();
+  }
+
+  // ---------- Apple Shortcuts hook ----------
+  // Browsers can't touch Screen Time, but they can hand a URL to the OS: shortcuts:// runs an
+  // Apple Shortcut, and worktimer:// (registered by blocking/windows/install.ps1) runs the Windows blocker.
+  let scLast = "";
+  function runShortcut(which) {
+    const name = (which === "work" ? s.settings.scWork : s.settings.scBreak).trim();
+    if (!name || scLast === which + s.phaseStart) return;
+    scLast = which + s.phaseStart;
+    const a = document.createElement("a");
+    a.href = hookUrl(name);
+    a.click();
+  }
+  const hookUrl = v => /^[a-z][\w+.-]*:/i.test(v) ? v : `shortcuts://run-shortcut?name=${encodeURIComponent(v)}`;
+
+  // ---------- sound & notifications ----------
+  let ac;
+  function unlockAudio() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch {} }
+  function chime(up) {
+    if (!s.settings.sound) return;
+    try {
+      unlockAudio();
+      const notes = up ? [523.25, 659.25, 783.99] : [783.99, 659.25, 523.25];
+      notes.forEach((f, i) => {
+        const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + i * 0.18;
+        o.type = "sine"; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+        o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 1);
+      });
+    } catch {}
+  }
+  function alertPhase() {
+    const toBreak = s.phase === "break";
+    chime(!toBreak);
+    const body = toBreak ? `Nice work. Take ${s.settings.brk} minutes.` : `Break's over. Next up: ${taskName(s.activeTask) || "pick a task"}.`;
+    toast(body);
+    if (s.settings.notify && "Notification" in window && Notification.permission === "granted") {
+      try { new Notification(toBreak ? "Break time" : "Back to work", { body, silent: true }); } catch {}
+    }
+  }
+
+  // ---------- rendering ----------
+  let fav = { key: "" };
+  function drawFavicon() {
+    const p = 1 - s.remaining / s.total, key = `${s.phase}${Math.round(p * 40)}${!!s.endsAt}`;
+    if (key === fav.key) return; fav.key = key;
+    const cv = document.createElement("canvas"); cv.width = cv.height = 64;
+    const g = cv.getContext("2d"), col = getComputedStyle($("main")).getPropertyValue("--phase").trim() || "#d9480f";
+    g.lineWidth = 10; g.strokeStyle = col + "40"; g.beginPath(); g.arc(32, 32, 24, 0, 2 * Math.PI); g.stroke();
+    g.strokeStyle = col; g.lineCap = "round"; g.beginPath(); g.arc(32, 32, 24, -Math.PI / 2, -Math.PI / 2 + Math.max(0.01, 1 - p) * 2 * Math.PI); g.stroke();
+    $("favicon").href = cv.toDataURL();
+  }
 
   function renderClock() {
-    const total = s.phase === "work" ? WORK : BREAK;
     $("time").textContent = fmt(s.remaining);
-    const bar = $("bar");
-    bar.style.stroke = `var(--${s.phase})`;
-    bar.style.strokeDasharray = C;
-    bar.style.strokeDashoffset = C * (s.remaining / total);
-    document.title = `${fmt(s.remaining)} ${s.phase === "work" ? "Work" : "Break"}`;
+    $("bar").style.strokeDasharray = C;
+    $("bar").style.strokeDashoffset = C * (1 - s.remaining / s.total);
+    const end = s.endsAt ? `ends ${hm(new Date(s.endsAt).toISOString())}` : (s.phaseStart ? "paused" : "ready");
+    $("sub").textContent = `Cycle ${s.cycle} · ${end}`;
+    document.title = `${fmt(s.remaining)} · ${s.phase === "work" ? (taskName(s.activeTask) || "Work") : "Break"}`;
+    drawFavicon();
   }
 
   function render() {
-    renderClock();
-    const p = $("phase");
-    p.textContent = s.phase === "work" ? "Work · 40 min" : "Break · 10 min";
-    p.className = "phase " + s.phase;
-    $("cycle").textContent = `Cycle ${s.cycle}`;
-    $("startBtn").textContent = s.endsAt ? "Pause" : (s.phaseStart ? "Resume" : "Start");
-    const name = taskName(s.activeTask);
-    $("current").innerHTML = name ? `Working on <b></b>` : "No task selected";
-    if (name) $("current").querySelector("b").textContent = name;
+    const m = $("main");
+    m.className = s.phase;
+    $("modeWork").className = s.phase === "work" ? "on" : "";
+    $("modeBreak").className = s.phase === "break" ? "on" : "";
+    $("modeWork").textContent = `Work ${s.settings.work}`;
+    $("modeBreak").textContent = `Break ${s.settings.brk}`;
+    $("playIcon").setAttribute("href", s.endsAt ? "#i-pause" : "#i-play");
+    $("app").classList.toggle("focus", !!s.ui.focus);
+    document.documentElement.dataset.theme = s.ui.theme === "auto" ? "" : s.ui.theme;
+    if (s.ui.theme === "auto") delete document.documentElement.dataset.theme;
 
+    const today = dayKey(Date.now());
+    const doneToday = s.sessions.filter(x => x.type === "work" && x.completed && dayKey(x.end) === today).length;
+    $("pips").innerHTML = Array.from({ length: Math.max(4, doneToday + (s.phase === "work" ? 1 : 0)) },
+      (_, i) => `<span class="pip${i < doneToday ? " on" : ""}"></span>`).join("");
+
+    const sel = $("taskSelect"); sel.innerHTML = "";
+    sel.append(new Option("No task", ""));
+    s.tasks.filter(t => !t.done || t.id === s.activeTask).forEach(t => sel.append(new Option(t.name, t.id)));
+    sel.value = s.activeTask || "";
+
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === s.ui.tab));
+    document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.dataset.pane === s.ui.tab));
+    document.querySelectorAll("#rangeSeg button").forEach(b => b.classList.toggle("on", +b.dataset.r === s.ui.range));
+    $("estVal").textContent = s.ui.est ? `${s.ui.est}×` : "–";
+
+    renderTasks(); renderLog(); renderStats(); renderClock();
+  }
+
+  function renderTasks() {
     const ul = $("tasks"); ul.innerHTML = "";
+    if (!s.tasks.length) ul.innerHTML = `<li class="empty">No tasks yet. Add one above, or import a plan from Claude.</li>`;
     s.tasks.forEach(t => {
       const li = document.createElement("li");
       li.className = "task" + (t.done ? " done" : "") + (t.id === s.activeTask ? " active" : "");
-      li.innerHTML = `<input type="checkbox"><span class="name"></span><span class="mins"></span><button class="x" title="Delete">×</button>`;
+      li.draggable = true; li.dataset.id = t.id;
+      li.innerHTML = `<button class="check" title="Finished"><svg class="i"><use href="#i-check"/></svg></button>
+        <div class="body"><div class="name"></div><div class="notes"></div><div class="meta"></div></div>
+        <button class="del" title="Delete"><svg class="i"><use href="#i-x"/></svg></button>`;
       li.querySelector(".name").textContent = t.name;
-      const m = minutesFor(t.id);
-      li.querySelector(".mins").textContent = (m ? m + "m" : "") + (t.estimate ? ` / ${t.estimate}m` : "");
-      const cb = li.querySelector("input"); cb.checked = !!t.done;
-      cb.onclick = e => { e.stopPropagation(); t.done = cb.checked; if (t.done && s.activeTask === t.id) s.activeTask = null; save(); render(); };
-      li.querySelector(".x").onclick = e => { e.stopPropagation(); s.tasks = s.tasks.filter(x => x.id !== t.id); if (s.activeTask === t.id) s.activeTask = null; save(); render(); };
-      li.onclick = () => { if (s.phase === "work" && s.phaseStart && s.activeTask !== t.id) splitWork(); s.activeTask = s.activeTask === t.id ? null : t.id; save(); render(); };
+      const notes = li.querySelector(".notes"); if (t.notes) notes.textContent = t.notes; else notes.remove();
+      const mins = Math.round(workSecs(t.id) / 60), meta = li.querySelector(".meta");
+      if (t.estimate) {
+        const pct = Math.min(100, mins / t.estimate * 100);
+        meta.innerHTML = `<div class="progress${mins > t.estimate ? " over" : ""}"><i style="width:${pct}%"></i></div><span>${mins} / ${t.estimate} min</span>`;
+      } else if (mins) meta.textContent = `${mins} min`;
+      else meta.remove();
+
+      li.querySelector(".check").onclick = e => { e.stopPropagation(); finishTask(t.id, !t.done); };
+      li.querySelector(".del").onclick = e => {
+        e.stopPropagation();
+        const i = s.tasks.indexOf(t); s.tasks.splice(i, 1);
+        if (s.activeTask === t.id) s.activeTask = null;
+        save(); render();
+        toast(`Deleted "${t.name}"`, "Undo", () => { s.tasks.splice(i, 0, t); save(); render(); });
+      };
+      li.onclick = () => setActive(s.activeTask === t.id ? null : t.id);
+      const nm = li.querySelector(".name");
+      nm.ondblclick = e => {
+        e.stopPropagation(); nm.contentEditable = "plaintext-only"; nm.focus();
+        document.getSelection().selectAllChildren(nm); li.draggable = false;
+      };
+      nm.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); nm.blur(); } if (e.key === "Escape") { nm.textContent = t.name; nm.blur(); } e.stopPropagation(); };
+      nm.onblur = () => { const v = nm.textContent.trim(); if (v && v !== t.name) { t.name = v; save(); } render(); };
+      nm.onclick = e => { if (nm.isContentEditable) e.stopPropagation(); };
+
+      li.ondragstart = e => { li.classList.add("dragging"); e.dataTransfer.setData("text/task", t.id); e.dataTransfer.effectAllowed = "move"; };
+      li.ondragend = () => li.classList.remove("dragging");
+      li.ondragover = e => { if (e.dataTransfer.types.includes("text/task")) { e.preventDefault(); li.classList.add("over"); } };
+      li.ondragleave = () => li.classList.remove("over");
+      li.ondrop = e => {
+        e.preventDefault(); e.stopPropagation(); li.classList.remove("over");
+        const from = s.tasks.findIndex(x => x.id === e.dataTransfer.getData("text/task"));
+        if (from < 0) return;
+        const [mv] = s.tasks.splice(from, 1);
+        s.tasks.splice(s.tasks.indexOf(t), 0, mv); save(); render();
+      };
       ul.appendChild(li);
     });
+    const open = s.tasks.filter(t => !t.done).length;
+    $("taskSummary").textContent = s.tasks.length ? `${open} open · ${s.tasks.length - open} finished` : "";
+    $("clearDone").style.visibility = s.tasks.some(t => t.done) ? "visible" : "hidden";
+  }
 
-    const todays = s.sessions.filter(x => new Date(x.end).toDateString() === today());
-    const workSec = todays.filter(x => x.type === "work").reduce((a, x) => a + x.seconds, 0);
-    $("statWork").textContent = workSec >= 3600 ? `${Math.floor(workSec / 3600)}h ${Math.round(workSec % 3600 / 60)}m` : `${Math.round(workSec / 60)}m`;
-    $("statCycles").textContent = todays.filter(x => x.type === "work" && x.completed).length;
-
-    const log = $("log"); log.innerHTML = "";
-    todays.slice().reverse().forEach(x => {
-      const li = document.createElement("li");
-      li.innerHTML = `<span class="n"></span><span class="t"></span>`;
-      li.querySelector(".n").textContent = x.type === "work" ? (x.task || "Untitled work") : "Break";
-      li.querySelector(".t").textContent = `${hm(x.start)} · ${Math.round(x.seconds / 60)}m`;
-      log.appendChild(li);
+  function renderLog() {
+    const box = $("log"); box.innerHTML = "";
+    if (!s.sessions.length) { box.innerHTML = `<div class="empty">Sessions show up here as you work.</div>`; return; }
+    const groups = new Map();
+    s.sessions.slice().reverse().forEach(x => { const k = dayKey(x.end); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); });
+    [...groups.entries()].slice(0, 30).forEach(([k, list]) => {
+      const d = document.createElement("div"); d.className = "day";
+      const total = list.reduce((a, x) => a + (x.type === "work" ? x.seconds : 0), 0);
+      const label = k === dayKey(Date.now()) ? "Today" : k === dayKey(Date.now() - 864e5) ? "Yesterday"
+        : new Date(list[0].end).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+      d.innerHTML = `<div class="day-h"><span>${label}</span><span>${dur(total)} focused</span></div>`;
+      list.forEach(x => {
+        const e = document.createElement("div");
+        e.className = "entry" + (x.type === "break" ? " brk" : "");
+        e.innerHTML = `<span class="d"></span><span class="n"></span><span class="t"></span>`;
+        e.querySelector(".n").textContent = x.type === "work" ? (x.task || "Untitled work") + (x.completed ? "" : " (partial)") : "Break";
+        e.querySelector(".t").textContent = `${hm(x.start)} · ${Math.round(x.seconds / 60)}m`;
+        if (x.type === "work") {
+          const n = document.createElement("div"); n.className = "note"; n.contentEditable = "plaintext-only";
+          n.textContent = x.note || "";
+          n.onkeydown = ev => { ev.stopPropagation(); if (ev.key === "Enter") { ev.preventDefault(); n.blur(); } };
+          n.onblur = () => { x.note = n.textContent.trim(); save(); };
+          e.appendChild(n);
+        }
+        d.appendChild(e);
+      });
+      box.appendChild(d);
     });
-    if (!todays.length) log.innerHTML = `<li><span class="t">Nothing logged yet today</span></li>`;
   }
 
-  // Switching task mid-block closes the current slice so minutes go to the right task.
-  function splitWork() {
-    tick();
-    logSession("work", elapsed(), false);
-    s.sliceOffset = (s.sliceOffset || 0) + elapsed();
-    s.phaseStart = new Date().toISOString();
+  function renderStats() {
+    const byDay = new Map();
+    s.sessions.forEach(x => { if (x.type === "work") byDay.set(dayKey(x.end), (byDay.get(dayKey(x.end)) || 0) + x.seconds); });
+    const today = dayKey(Date.now());
+    $("stToday").textContent = dur(byDay.get(today) || 0);
+    $("stCycles").textContent = s.sessions.filter(x => x.type === "work" && x.completed && dayKey(x.end) === today).length;
+    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setHours(12); d.setDate(d.getDate() - 6 + i); return d; });
+    const vals = days.map(d => (byDay.get(dayKey(d)) || 0) / 60);
+    $("stWeek").textContent = dur(vals.reduce((a, b) => a + b, 0) * 60);
+    let streak = 0; const d = new Date();
+    if (!byDay.get(dayKey(d))) d.setDate(d.getDate() - 1);
+    while (byDay.get(dayKey(d))) { streak++; d.setDate(d.getDate() - 1); }
+    $("stStreak").textContent = streak;
+
+    const W = 340, H = 150, pad = 18, bw = (W - 8) / 7, max = Math.max(s.settings.work * 2, ...vals);
+    const goal = s.settings.work * 4;
+    let svg = `<line x1="0" x2="${W}" y1="${H - pad - (goal / Math.max(max, goal)) * (H - pad - 14)}" y2="${H - pad - (goal / Math.max(max, goal)) * (H - pad - 14)}" stroke="var(--line)" stroke-dasharray="3 3"/>`;
+    const top = Math.max(max, goal);
+    days.forEach((dd, i) => {
+      const h = (vals[i] / top) * (H - pad - 14), x = 4 + i * bw + bw * 0.2, w = bw * 0.6;
+      const isToday = i === 6;
+      svg += `<rect x="${x}" y="${H - pad - h}" width="${w}" height="${Math.max(h, 2)}" rx="4" fill="${isToday ? "var(--accent)" : "color-mix(in srgb, var(--accent) 45%, transparent)"}"><title>${Math.round(vals[i])} min</title></rect>`;
+      if (vals[i] >= 1) svg += `<text x="${x + w / 2}" y="${H - pad - h - 4}" text-anchor="middle">${vals[i] >= 60 ? (vals[i] / 60).toFixed(1) + "h" : Math.round(vals[i]) + "m"}</text>`;
+      svg += `<text x="${x + w / 2}" y="${H - 4}" text-anchor="middle">${dd.toLocaleDateString([], { weekday: "narrow" })}</text>`;
+    });
+    $("chart").setAttribute("viewBox", `0 0 ${W} ${H}`);
+    $("chart").innerHTML = svg;
+
+    const per = new Map();
+    s.sessions.forEach(x => { if (x.type === "work" && dayKey(x.end) === today) { const k = x.task || "Untitled"; per.set(k, (per.get(k) || 0) + x.seconds); } });
+    const rows = [...per.entries()].sort((a, b) => b[1] - a[1]), mx = rows.length ? rows[0][1] : 1;
+    $("byTask").innerHTML = rows.length ? "" : `<div class="empty">Nothing tracked yet today.</div>`;
+    rows.forEach(([k, v]) => {
+      const b = document.createElement("div"); b.className = "b";
+      b.innerHTML = `<span class="k"></span><span class="m">${dur(v)}</span><div class="track"><i style="width:${v / mx * 100}%"></i></div>`;
+      b.querySelector(".k").textContent = k; $("byTask").appendChild(b);
+    });
   }
 
+  // ---------- tasks ----------
   function addTask(name, extra = {}) {
     name = String(name || "").trim(); if (!name) return null;
-    const t = { id: uid(), name, done: false, ...extra };
+    const t = { id: uid(), name, done: false, created: new Date().toISOString(), ...extra };
     s.tasks.push(t); return t;
   }
-
-  function exportData() {
-    return {
-      app: "work-timer", version: 1, exportedAt: new Date().toISOString(),
-      cycle: { workMinutes: 40, breakMinutes: 10 },
-      tasks: s.tasks.map(t => ({ name: t.name, done: !!t.done, minutesWorked: minutesFor(t.id),
-        ...(t.estimate ? { estimate: t.estimate } : {}), ...(t.notes ? { notes: t.notes } : {}) })),
-      sessions: s.sessions.map(({ taskId, ...x }) => ({ ...x, minutes: Math.round(x.seconds / 60) })),
-    };
+  function finishTask(id, done = true) {
+    const t = task(id); if (!t) return;
+    t.done = done;
+    if (done && s.activeTask === id) {
+      const next = s.tasks.find(x => !x.done);
+      setActive(next ? next.id : null);
+      toast(next ? `Finished. Next: ${next.name}` : "Finished. That's everything.");
+    }
+    save(); render();
+  }
+  function nextTask() {
+    const open = s.tasks.filter(t => !t.done); if (!open.length) return;
+    const i = open.findIndex(t => t.id === s.activeTask);
+    setActive(open[(i + 1) % open.length].id);
   }
 
+  // ---------- note dialog ----------
+  function askNote(x) {
+    const dlg = $("noteDlg");
+    $("noteTitle").textContent = x.task ? `Done: ${x.task}` : "Work block done";
+    $("noteText").value = ""; $("noteDone").checked = false;
+    $("noteDone").parentElement.style.display = x.taskId ? "" : "none";
+    dlg.onclose = () => {
+      if (dlg.returnValue === "save") {
+        x.note = $("noteText").value.trim();
+        if ($("noteDone").checked && x.taskId) finishTask(x.taskId);
+        save(); render();
+      }
+    };
+    if (!dlg.open) dlg.showModal();
+    $("noteText").focus();
+  }
+  $("noteText").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("noteDlg").close("save"); } };
+
+  // ---------- Claude export/import ----------
+  function inRange(x) { return !s.ui.range || new Date(x.end) >= new Date(Date.now() - s.ui.range * 864e5 + (s.ui.range === 1 ? 864e5 - (Date.now() - new Date().setHours(0, 0, 0, 0)) : 0)); }
+  function exportData(all = true) {
+    return {
+      app: "work-timer", version: 2, exportedAt: new Date().toISOString(),
+      cycle: { workMinutes: s.settings.work, breakMinutes: s.settings.brk },
+      activeTask: taskName(s.activeTask),
+      tasks: s.tasks.map(t => ({ name: t.name, done: !!t.done, minutesWorked: Math.round(workSecs(t.id) / 60),
+        ...(t.estimate ? { estimate: t.estimate } : {}), ...(t.notes ? { notes: t.notes } : {}) })),
+      sessions: s.sessions.filter(x => all || inRange(x)).map(({ id, taskId, ...x }) => ({ ...x, minutes: Math.round(x.seconds / 60) })),
+    };
+  }
   function forClaude() {
-    const d = exportData();
-    const todays = d.sessions.filter(x => new Date(x.end).toDateString() === today());
+    const d = exportData(false), work = d.sessions.filter(x => x.type === "work");
+    const label = { 1: "today", 7: "the last 7 days", 0: "all time" }[s.ui.range];
     const lines = [
-      `Work timer log (40 min work / 10 min break), exported ${new Date().toLocaleString()}.`,
+      `Here is my work-timer log for ${label} (${d.cycle.workMinutes} min work / ${d.cycle.breakMinutes} min break cycles).`,
+      `Total focused: ${dur(work.reduce((a, x) => a + x.seconds, 0))} across ${work.filter(x => x.completed).length} full cycles.`,
       ``, `Tasks:`,
-      ...d.tasks.map(t => `- [${t.done ? "x" : " "}] ${t.name} (${t.minutesWorked} min${t.estimate ? ` of ${t.estimate} est.` : ""})`),
-      ``, `Today's sessions:`,
-      ...todays.map(x => `- ${hm(x.start)}-${hm(x.end)} ${x.type}${x.task ? `: ${x.task}` : ""} (${x.minutes} min${x.completed ? "" : ", cut short"})`),
+      ...(d.tasks.length ? d.tasks.map(t => `- [${t.done ? "x" : " "}] ${t.name}: ${t.minutesWorked} min${t.estimate ? ` of ${t.estimate} estimated` : ""}${t.notes ? ` (${t.notes})` : ""}`) : ["- (none)"]),
+      ``, `Sessions:`,
+      ...(work.length ? work.map(x => `- ${new Date(x.start).toLocaleDateString([], { month: "short", day: "numeric" })} ${hm(x.start)}-${hm(x.end)} ${x.task || "untitled"} (${x.minutes} min${x.completed ? "" : ", partial"})${x.note ? `: ${x.note}` : ""}`) : ["- (none)"]),
       ``, `Raw JSON:`, "```json", JSON.stringify(d, null, 2), "```",
-      ``, `To send tasks back, reply with JSON like {"tasks":[{"name":"...","estimate":40}]} and I will paste it into the timer.`,
+      ``, `If you suggest a plan, reply with a JSON block like {"tasks":[{"name":"...","estimate":${s.settings.work},"notes":"..."}]} so I can import it into the timer.`,
     ];
     return lines.join("\n");
   }
-
+  function planningPrompt() {
+    const open = s.tasks.filter(t => !t.done).map(t => `- ${t.name}${t.estimate ? ` (~${t.estimate} min)` : ""}`);
+    return [
+      `I work in ${s.settings.work}-minute focus blocks with ${s.settings.brk}-minute breaks.`,
+      `Goal for this session: <describe what you want to get done>`,
+      open.length ? `\nAlready on my list:\n${open.join("\n")}` : "",
+      `\nBreak this into concrete tasks, each sized to fit in one or a few ${s.settings.work}-minute blocks, in the order I should do them.`,
+      `Reply with a short explanation, then one JSON block in exactly this shape so I can import it:`,
+      "```json",
+      `{"tasks":[{"name":"short imperative task","estimate":${s.settings.work},"notes":"what done looks like"}],"activeTask":"name of the first task"}`,
+      "```",
+      `"estimate" is in minutes.`,
+    ].filter(Boolean).join("\n");
+  }
   function importData(text, replace) {
     let raw = String(text).trim();
-    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fence) raw = fence[1];
+    const fences = [...raw.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)];
+    if (fences.length) raw = fences[fences.length - 1][1];
+    else if (!/^[\[{]/.test(raw)) { const m = raw.match(/[\[{][\s\S]*[\]}]/); if (m) raw = m[0]; }
     const d = JSON.parse(raw);
     const list = Array.isArray(d) ? d : (d.tasks || []);
     if (replace) { s.tasks = []; s.activeTask = null; }
     let n = 0;
     list.forEach(t => {
-      const name = typeof t === "string" ? t : t.name;
+      const name = typeof t === "string" ? t : t && (t.name || t.title || t.task);
+      if (!name || (!replace && s.tasks.some(x => x.name === name && !x.done))) return;
       const extra = typeof t === "object" ? {
         done: !!t.done,
         ...(t.estimate ? { estimate: Number(t.estimate) } : {}),
@@ -322,62 +824,149 @@
       d.sessions.forEach(x => {
         if (seen.has(x.start + x.type)) return;
         const t = s.tasks.find(t => t.name === x.task);
-        s.sessions.push({ type: x.type, taskId: t ? t.id : null, task: x.task || null,
-          start: x.start, end: x.end, seconds: x.seconds ?? x.minutes * 60, completed: !!x.completed });
+        s.sessions.push({ id: uid(), type: x.type, taskId: t ? t.id : null, task: x.task || null,
+          start: x.start, end: x.end, seconds: x.seconds ?? x.minutes * 60, completed: !!x.completed, note: x.note || "" });
       });
+      s.sessions.sort((a, b) => new Date(a.end) - new Date(b.end));
     }
-    if (d.activeTask) { const t = s.tasks.find(t => t.name === d.activeTask); if (t) s.activeTask = t.id; }
+    if (d.activeTask) { const t = s.tasks.find(t => t.name === d.activeTask && !t.done); if (t) setActive(t.id); }
+    if (!s.activeTask) { const t = s.tasks.find(t => !t.done); if (t) setActive(t.id); }
+    s.ui.tab = "tasks";
     save(); render();
     return n;
   }
+  async function copy(text, okMsg) {
+    try { await navigator.clipboard.writeText(text); toast(okMsg); }
+    catch { $("importBox").value = text; s.ui.tab = "claude"; render(); $("importBox").select(); toast("Clipboard blocked: text placed in the box, copy it from there"); }
+  }
 
-  const msg = t => { $("msg").textContent = t; setTimeout(() => { if ($("msg").textContent === t) $("msg").textContent = ""; }, 4000); };
+  // ---------- toast ----------
+  let toastTimer;
+  function toast(text, action, fn) {
+    const t = $("toast"); t.textContent = text;
+    if (action) {
+      const b = document.createElement("button"); b.textContent = action; b.className = "link";
+      b.style.cssText = "color:inherit;margin-left:10px;font-weight:600;text-decoration:underline";
+      b.onclick = () => { fn(); t.classList.remove("on"); };
+      t.appendChild(b); t.style.pointerEvents = "auto";
+    } else t.style.pointerEvents = "none";
+    t.classList.add("on"); clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("on"), action ? 6000 : 3200);
+  }
 
-  $("startBtn").onclick = () => s.endsAt ? pause() : start();
-  $("skipBtn").onclick = () => { tick(); nextPhase(false); };
-  $("resetBtn").onclick = () => {
-    if (!confirm("Reset the timer to the start of a work block? Tasks and log are kept.")) return;
-    Object.assign(s, { phase: "work", cycle: 1, remaining: WORK, endsAt: null, phaseStart: null, sliceOffset: 0 });
-    save(); render();
+  // ---------- wiring ----------
+  $("startBtn").onclick = toggle;
+  $("skipBtn").onclick = skip;
+  $("resetBtn").onclick = restart;
+  $("modeWork").onclick = () => switchMode("work");
+  $("modeBreak").onclick = () => switchMode("break");
+  $("taskSelect").onchange = e => setActive(e.target.value || null);
+  $("tabs").onclick = e => { const b = e.target.closest("button"); if (b) { s.ui.tab = b.dataset.tab; save(); render(); } };
+  $("rangeSeg").onclick = e => { const b = e.target.closest("button"); if (b) { s.ui.range = +b.dataset.r; save(); render(); } };
+  $("panelBtn").onclick = () => { s.ui.focus = !s.ui.focus; save(); render(); };
+  $("themeBtn").onclick = () => {
+    const order = ["auto", "light", "dark"]; s.ui.theme = order[(order.indexOf(s.ui.theme) + 1) % 3];
+    save(); render(); fav.key = ""; drawFavicon(); toast(`Theme: ${s.ui.theme}`);
   };
+  $("estUp").onclick = () => { s.ui.est = Math.min(9, s.ui.est + 1); save(); render(); };
+  $("estDown").onclick = () => { s.ui.est = Math.max(0, s.ui.est - 1); save(); render(); };
   $("taskInput").onkeydown = e => {
+    e.stopPropagation();
+    if (e.key === "Escape") e.target.blur();
     if (e.key !== "Enter") return;
-    const t = addTask(e.target.value); if (t && !s.activeTask) s.activeTask = t.id;
+    const t = addTask(e.target.value, s.ui.est ? { estimate: s.ui.est * s.settings.work } : {});
+    if (t && !s.activeTask) setActive(t.id);
     e.target.value = ""; save(); render();
   };
-  $("copyBtn").onclick = async () => {
-    try { await navigator.clipboard.writeText(forClaude()); msg("Copied. Paste it into Claude."); }
-    catch { $("importBox").value = forClaude(); msg("Clipboard blocked, log placed in the box below."); }
+  $("clearDone").onclick = () => {
+    const removed = s.tasks.filter(t => t.done); s.tasks = s.tasks.filter(t => !t.done); save(); render();
+    toast(`Cleared ${removed.length}`, "Undo", () => { s.tasks.push(...removed); save(); render(); });
   };
+  $("copyBtn").onclick = () => copy(forClaude(), "Copied. Paste it into Claude.");
+  $("promptBtn").onclick = () => copy(planningPrompt(), "Prompt copied. Fill in your goal and send it to Claude.");
   $("exportBtn").onclick = () => {
-    const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `work-log-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click(); URL.revokeObjectURL(a.href);
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(exportData(), null, 2)], { type: "application/json" }));
+    a.download = `work-log-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(a.href);
   };
   $("importBtn").onclick = () => {
-    try { const n = importData($("importBox").value, $("replaceChk").checked); $("importBox").value = ""; msg(`Imported ${n} task${n === 1 ? "" : "s"}.`); }
-    catch (e) { msg("Could not read that JSON: " + e.message); }
+    try { const n = importData($("importBox").value, $("replaceChk").checked); $("importBox").value = ""; toast(`Imported ${n} task${n === 1 ? "" : "s"}`); }
+    catch (e) { toast("Couldn't find valid JSON in that text"); }
   };
+  $("importBox").onkeydown = e => e.stopPropagation();
 
-  // Claude can also hand over tasks via a link: index.html#import=<url-encoded JSON>
-  // or by placing a tasks.json next to this file and opening index.html?load=tasks.json.
+  $("settingsBtn").onclick = () => {
+    const st = s.settings;
+    $("setWork").value = st.work; $("setBreak").value = st.brk;
+    $("setAutoBreak").checked = st.autoBreak; $("setAutoWork").checked = st.autoWork;
+    $("setAskNote").checked = st.askNote; $("setSound").checked = st.sound; $("setNotify").checked = st.notify;
+    $("setSCWork").value = st.scWork; $("setSCBreak").value = st.scBreak;
+    $("settingsDlg").showModal();
+  };
+  $("settingsDlg").onclose = () => {
+    if ($("settingsDlg").returnValue === "wipe") {
+      if (confirm("Erase all tasks, sessions and settings? This can't be undone.")) { localStorage.removeItem(KEY); location.reload(); }
+      return;
+    }
+    const st = s.settings, clamp = (v, lo, hi, d) => Math.min(hi, Math.max(lo, Math.round(+v) || d));
+    st.work = clamp($("setWork").value, 1, 180, 40); st.brk = clamp($("setBreak").value, 1, 60, 10);
+    st.autoBreak = $("setAutoBreak").checked; st.autoWork = $("setAutoWork").checked;
+    st.askNote = $("setAskNote").checked; st.sound = $("setSound").checked; st.notify = $("setNotify").checked;
+    st.scWork = $("setSCWork").value.trim(); st.scBreak = $("setSCBreak").value.trim();
+    if (!s.phaseStart) s.total = s.remaining = phaseLen(s.phase);
+    if (st.notify && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
+    save(); render();
+  };
+  const testHook = id => { const v = $(id).value.trim(); if (!v) return toast("Fill in that field first"); location.href = hookUrl(v); };
+  $("testSC").onclick = () => testHook("setSCWork");
+  $("testSCB").onclick = () => testHook("setSCBreak");
+  $("fillMac").onclick = () => { $("setSCWork").value = "Work Timer Focus"; $("setSCBreak").value = "Work Timer Break"; };
+  $("fillWin").onclick = () => { $("setSCWork").value = "worktimer://block"; $("setSCBreak").value = "worktimer://unblock"; };
+  $("keysBtn").onclick = () => $("keysDlg").showModal();
+
+  document.addEventListener("keydown", e => {
+    if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector("dialog[open]")) return;
+    if (e.target.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const k = e.key.toLowerCase();
+    const act = {
+      " ": toggle, s: skip, r: restart, j: nextTask,
+      n: () => { s.ui.focus = false; s.ui.tab = "tasks"; render(); $("taskInput").focus(); },
+      d: () => s.activeTask && finishTask(s.activeTask),
+      f: () => { s.ui.focus = !s.ui.focus; save(); render(); },
+      c: () => $("copyBtn").click(),
+      "?": () => $("keysDlg").showModal(),
+      1: () => { s.ui.tab = "tasks"; render(); }, 2: () => { s.ui.tab = "log"; render(); },
+      3: () => { s.ui.tab = "stats"; render(); }, 4: () => { s.ui.tab = "claude"; render(); },
+    }[k];
+    if (act) { e.preventDefault(); act(); }
+  });
+
+  // Drop a JSON file (e.g. one Claude wrote) anywhere on the page to import it.
+  document.addEventListener("dragover", e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); });
+  document.addEventListener("drop", async e => {
+    const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return;
+    e.preventDefault();
+    try { const n = importData(await f.text(), false); toast(`Imported ${n} tasks from ${f.name}`); }
+    catch { toast(`Couldn't read ${f.name}`); }
+  });
+
   async function autoImport() {
     const h = location.hash.match(/import=(.*)$/);
     if (h) {
-      try { const n = importData(decodeURIComponent(h[1]), false); msg(`Imported ${n} tasks from link.`); } catch (e) { msg("Link import failed: " + e.message); }
+      try { const n = importData(decodeURIComponent(h[1]), false); toast(`Imported ${n} tasks from link`); }
+      catch { toast("Link import failed"); }
       history.replaceState(null, "", location.pathname + location.search);
     }
     const q = new URLSearchParams(location.search).get("load");
     if (q) {
-      try { const r = await fetch(q); const n = importData(await r.text(), true); msg(`Loaded ${n} tasks from ${q}.`); }
-      catch (e) { msg(`Could not load ${q}: ${e.message}`); }
+      try { const r = await fetch(q, { cache: "no-store" }); const n = importData(await r.text(), true); toast(`Loaded ${n} tasks from ${q}`); }
+      catch { toast(`Couldn't load ${q}`); }
     }
   }
 
-  setInterval(tick, 500);
+  setInterval(tick, 250);
   document.addEventListener("visibilitychange", tick);
+  window.addEventListener("storage", e => { if (e.key === KEY) location.reload(); });
   tick(); render(); autoImport();
 })();
 </script>

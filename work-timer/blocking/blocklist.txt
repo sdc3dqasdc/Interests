@@ -1,0 +1,9 @@
+# One domain per line. www. is added automatically.
+youtube.com
+reddit.com
+x.com
+twitter.com
+instagram.com
+tiktok.com
+facebook.com
+netflix.com
