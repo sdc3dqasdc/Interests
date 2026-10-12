@@ -9,21 +9,21 @@
   :root {
     --bg: #f4f2ee; --surface: #ffffff; --surface-2: #f8f7f4; --ink: #1c1b1a; --muted: #75716b;
     --faint: #a8a39b; --line: #e6e2db; --accent: #3b5bdb; --accent-ink: #ffffff;
-    --work: #d9480f; --work-tint: #fbeee6; --break: #2b8a3e; --break-tint: #e8f4ea; --on-phase: #ffffff;
+    --work: #d9480f; --work-tint: #fbeee6; --break: #2b8a3e; --break-tint: #e8f4ea; --on-phase: #ffffff; --over: #e03131;
     --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06); --radius: 12px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #121214; --surface: #1b1b1e; --surface-2: #222226; --ink: #eceae6; --muted: #9b978f;
       --faint: #6b6862; --line: #2d2d31; --accent: #748ffc; --accent-ink: #0d0d10;
-      --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113;
+      --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113; --over: #ff6b6b;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3); color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #121214; --surface: #1b1b1e; --surface-2: #222226; --ink: #eceae6; --muted: #9b978f;
     --faint: #6b6862; --line: #2d2d31; --accent: #748ffc; --accent-ink: #0d0d10;
-    --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113;
+    --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113; --over: #ff6b6b;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3); color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -130,9 +130,26 @@
   .task.done .name { text-decoration: line-through; color: var(--faint); }
   .task .notes { font-size: 12.5px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
   .task .meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .progress { flex: 1; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; max-width: 140px; }
-  .progress i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
-  .progress.over i { background: var(--work); }
+  .pb { flex: 1; display: flex; height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; min-width: 60px; }
+  .pb i { display: block; height: 100%; flex: none; }
+  .pb .a { background: var(--accent); }
+  .pb .o { background: var(--over); }
+  .pb .e { background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--accent) 45%, transparent) 0 3px, color-mix(in srgb, var(--accent) 12%, transparent) 3px 6px); }
+  .task .pb { max-width: 150px; }
+  .tag-over { color: var(--over); font-weight: 600; }
+  .tag-early { color: var(--accent); font-weight: 600; }
+  .plan-sum { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .plan-sum b { color: var(--ink); font-weight: 600; }
+  .plan-rows { display: flex; flex-direction: column; gap: 10px; }
+  .plan-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; font-size: 13px; }
+  .plan-row .k { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plan-row.done .k { color: var(--muted); }
+  .plan-row .m { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .plan-row .pb { grid-column: 1 / -1; height: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 14px; height: 8px; border-radius: 3px; display: inline-block; }
+  .play.arm { background: var(--over); }
   .task .del { opacity: 0; border: 0; background: none; color: var(--faint); padding: 2px; border-radius: 6px; }
   .task:hover .del { opacity: 1; } .task .del:hover { color: var(--work); }
   .empty { color: var(--faint); text-align: center; padding: 28px 8px; font-size: 13px; }
@@ -204,6 +221,7 @@
 <svg width="0" height="0" style="position:absolute">
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></symbol>
   <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
   <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5l10 7-10 7z"/><path d="M19 5v14"/></symbol>
   <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
@@ -254,11 +272,11 @@
 
       <div class="controls">
         <button class="ctl" id="resetBtn" title="Restart phase (R)"><svg class="i"><use href="#i-reset"/></svg></button>
-        <button class="play" id="startBtn" title="Start / pause (Space)"><svg class="i"><use id="playIcon" href="#i-play"/></svg></button>
+        <button class="play" id="startBtn" title="Start / end session (Space)"><svg class="i"><use id="playIcon" href="#i-play"/></svg></button>
         <button class="ctl" id="skipBtn" title="Skip to next phase (S)"><svg class="i"><use href="#i-skip"/></svg></button>
       </div>
     </div>
-    <div class="hint"><kbd>Space</kbd> start/pause · <kbd>S</kbd> skip · <kbd>N</kbd> new task · <kbd>?</kbd> all shortcuts</div>
+    <div class="hint"><kbd>Space</kbd> start/end · <kbd>S</kbd> skip · <kbd>N</kbd> new task · <kbd>?</kbd> all shortcuts</div>
   </main>
 
   <aside>
@@ -295,6 +313,8 @@
         <div class="tile"><div class="v" id="stWeek">0h</div><div class="k">last 7 days</div></div>
         <div class="tile"><div class="v" id="stStreak">0</div><div class="k">day streak</div></div>
       </div>
+      <h3>Plan vs actual</h3>
+      <div id="plan"></div>
       <h3>Last 7 days</h3>
       <svg class="chart" id="chart"></svg>
       <h3>Today by task</h3>
@@ -355,12 +375,10 @@
     <h2>Settings</h2>
     <div class="set"><span>Work minutes</span><input class="field" type="number" min="1" max="180" id="setWork"></div>
     <div class="set"><span>Break minutes</span><input class="field" type="number" min="1" max="60" id="setBreak"></div>
-    <div class="set"><span>Start breaks automatically</span><input type="checkbox" class="switch" id="setAutoBreak"></div>
-    <div class="set"><span>Start work automatically after a break</span><input type="checkbox" class="switch" id="setAutoWork"></div>
     <div class="set"><span>Ask for a note after each work block</span><input type="checkbox" class="switch" id="setAskNote"></div>
     <div class="set"><span>Sound</span><input type="checkbox" class="switch" id="setSound"></div>
     <div class="set"><span>Desktop notifications</span><input type="checkbox" class="switch" id="setNotify"></div>
-    <div class="muted">Duration changes apply from the next phase.</div>
+    <div class="muted">Once started, the timer runs work and breaks back to back with no pause. Duration changes apply from the next phase.</div>
     <h3 style="margin:6px 0 0">Focus &amp; site blocking</h3>
     <div class="muted">When a work block starts and ends, run an Apple Shortcut (by name) or open a link such as <code>worktimer://block</code> on Windows. Leave blank to disable. One-time setup is in the README.</div>
     <div class="wrap"><span class="muted">Fill in for</span><button type="button" class="btn" id="fillMac">Mac / iPhone</button><button type="button" class="btn" id="fillWin">Windows</button></div>
@@ -375,7 +393,7 @@
   <form method="dialog" class="dlg">
     <h2>Keyboard shortcuts</h2>
     <div class="keys">
-      <kbd>Space</kbd><span>Start / pause</span>
+      <kbd>Space</kbd><span>Start / end session (press twice to end)</span>
       <kbd>S</kbd><span>Skip to next phase</span>
       <kbd>R</kbd><span>Restart current phase</span>
       <kbd>N</kbd><span>New task</span>
@@ -405,7 +423,7 @@
 
   // ---------- state ----------
   const defaults = {
-    settings: { work: 40, brk: 10, autoBreak: true, autoWork: false, askNote: true, sound: true, notify: true, scWork: "", scBreak: "" },
+    settings: { work: 40, brk: 10, askNote: true, sound: true, notify: true, scWork: "", scBreak: "" },
     tasks: [], sessions: [], activeTask: null,
     phase: "work", cycle: 1, total: 40 * 60, remaining: 40 * 60, endsAt: null, phaseStart: null, sliceOffset: 0,
     ui: { tab: "tasks", theme: "auto", focus: false, est: 1, range: 1 },
@@ -443,8 +461,7 @@
     if (from === "break") s.cycle++;
     s.phase = from === "work" ? "break" : "work";
     s.total = s.remaining = phaseLen(s.phase);
-    const auto = s.phase === "break" ? s.settings.autoBreak : s.settings.autoWork;
-    const run = wasRunning && auto;
+    const run = wasRunning;
     s.endsAt = run ? Date.now() + s.total * 1000 : null;
     s.phaseStart = run ? new Date().toISOString() : null;
     if (completed) alertPhase();
@@ -470,8 +487,22 @@
     if (fresh && s.phase === "work") runShortcut("work");
     save(); render();
   }
-  function pause() { tick(); s.endsAt = null; save(); render(); }
-  const toggle = () => (s.endsAt ? pause() : start());
+  // No pause: while running, the button ends the session, and it takes two presses.
+  let armTimer = null;
+  function endSession() {
+    tick();
+    if (s.phaseStart) logSession(s.phase, elapsed(), false);
+    if (s.phase === "work" && s.phaseStart) runShortcut("break");
+    Object.assign(s, { phase: "work", total: phaseLen("work"), remaining: phaseLen("work"),
+      endsAt: null, phaseStart: null, sliceOffset: 0 });
+    save(); render(); toast("Session ended");
+  }
+  function toggle() {
+    if (!s.endsAt) return start();
+    if (armTimer) { clearTimeout(armTimer); armTimer = null; $("startBtn").classList.remove("arm"); return endSession(); }
+    $("startBtn").classList.add("arm"); toast("Press again to end the session");
+    armTimer = setTimeout(() => { armTimer = null; $("startBtn").classList.remove("arm"); }, 3000);
+  }
   function skip() { tick(); finishPhase(false); }
   function restart() {
     tick();
@@ -485,7 +516,10 @@
     tick();
     if (s.phaseStart) logSession(s.phase, elapsed(), false);
     if (s.phase === "work" && s.phaseStart) runShortcut("break");
-    Object.assign(s, { phase: p, total: phaseLen(p), remaining: phaseLen(p), endsAt: null, phaseStart: null, sliceOffset: 0 });
+    const run = !!s.endsAt;
+    Object.assign(s, { phase: p, total: phaseLen(p), remaining: phaseLen(p), sliceOffset: 0,
+      endsAt: run ? Date.now() + phaseLen(p) * 1000 : null, phaseStart: run ? new Date().toISOString() : null });
+    if (run && p === "work") runShortcut("work");
     save(); render();
   }
 
@@ -559,7 +593,7 @@
     $("time").textContent = fmt(s.remaining);
     $("bar").style.strokeDasharray = C;
     $("bar").style.strokeDashoffset = C * (1 - s.remaining / s.total);
-    const end = s.endsAt ? `ends ${hm(new Date(s.endsAt).toISOString())}` : (s.phaseStart ? "paused" : "ready");
+    const end = s.endsAt ? `ends ${hm(new Date(s.endsAt).toISOString())}` : "ready";
     $("sub").textContent = `Cycle ${s.cycle} · ${end}`;
     document.title = `${fmt(s.remaining)} · ${s.phase === "work" ? (taskName(s.activeTask) || "Work") : "Break"}`;
     drawFavicon();
@@ -572,7 +606,8 @@
     $("modeBreak").className = s.phase === "break" ? "on" : "";
     $("modeWork").textContent = `Work ${s.settings.work}`;
     $("modeBreak").textContent = `Break ${s.settings.brk}`;
-    $("playIcon").setAttribute("href", s.endsAt ? "#i-pause" : "#i-play");
+    $("playIcon").setAttribute("href", s.endsAt ? "#i-stop" : "#i-play");
+    $("startBtn").title = s.endsAt ? "End session (press twice)" : "Start (Space)";
     $("app").classList.toggle("focus", !!s.ui.focus);
     document.documentElement.dataset.theme = s.ui.theme === "auto" ? "" : s.ui.theme;
     if (s.ui.theme === "auto") delete document.documentElement.dataset.theme;
@@ -609,8 +644,7 @@
       const notes = li.querySelector(".notes"); if (t.notes) notes.textContent = t.notes; else notes.remove();
       const mins = Math.round(workSecs(t.id) / 60), meta = li.querySelector(".meta");
       if (t.estimate) {
-        const pct = Math.min(100, mins / t.estimate * 100);
-        meta.innerHTML = `<div class="progress${mins > t.estimate ? " over" : ""}"><i style="width:${pct}%"></i></div><span>${mins} / ${t.estimate} min</span>`;
+        meta.innerHTML = `${planBar(mins, t.estimate, t.done)}<span>${mins} / ${t.estimate} min</span>${planTag(mins, t.estimate, t.done)}`;
       } else if (mins) meta.textContent = `${mins} min`;
       else meta.remove();
 
@@ -680,7 +714,40 @@
     });
   }
 
+  // Plan bar: worked time up to the estimate in accent, time past it in red,
+  // and for a task finished early, the unused estimate as a striped shadow.
+  function planBar(actual, est, done, scale) {
+    scale = scale || Math.max(actual, est, 1);
+    const pct = v => `${(v / scale * 100).toFixed(2)}%`;
+    const a = Math.min(actual, est), over = Math.max(0, actual - est), early = done ? Math.max(0, est - actual) : 0;
+    return `<div class="pb"><i class="a" style="width:${pct(a)}"></i>${over ? `<i class="o" style="width:${pct(over)}"></i>` : ""}${early ? `<i class="e" style="width:${pct(early)}"></i>` : ""}</div>`;
+  }
+  function planTag(actual, est, done) {
+    if (actual > est) return `<span class="tag-over">+${actual - est}m over</span>`;
+    if (done && actual < est) return `<span class="tag-early">${est - actual}m early</span>`;
+    return "";
+  }
+
+  function renderPlan() {
+    const box = $("plan"), rows = s.tasks.filter(t => t.estimate).map(t => ({ t, m: Math.round(workSecs(t.id) / 60) }));
+    if (!rows.length) { box.innerHTML = `<div class="empty">Give tasks an estimate (the 1× stepper, or "estimate" in Claude's JSON) to compare plan and actual.</div>`; return; }
+    const scale = Math.max(...rows.map(r => Math.max(r.m, r.t.estimate)));
+    const over = rows.reduce((a, r) => a + Math.max(0, r.m - r.t.estimate), 0);
+    const early = rows.reduce((a, r) => a + (r.t.done ? Math.max(0, r.t.estimate - r.m) : 0), 0);
+    const planned = rows.reduce((a, r) => a + r.t.estimate, 0), worked = rows.reduce((a, r) => a + r.m, 0);
+    box.innerHTML = `<div class="plan-sum">Planned <b>${dur(planned * 60)}</b> · worked <b>${dur(worked * 60)}</b>` +
+      (over ? ` · <span class="tag-over">${dur(over * 60)} over</span>` : "") + (early ? ` · <span class="tag-early">${dur(early * 60)} saved</span>` : "") + `</div><div class="plan-rows"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>worked</span><span><i style="background:var(--over)"></i>over estimate</span><span><i class="e" style="background:repeating-linear-gradient(-45deg, color-mix(in srgb, var(--accent) 45%, transparent) 0 3px, color-mix(in srgb, var(--accent) 12%, transparent) 3px 6px)"></i>left when finished early</span></div>`;
+    rows.forEach(({ t, m }) => {
+      const r = document.createElement("div"); r.className = "plan-row" + (t.done ? " done" : "");
+      r.innerHTML = `<span class="k"></span><span class="m">${m} / ${t.estimate}m ${planTag(m, t.estimate, t.done)}</span>${planBar(m, t.estimate, t.done, scale)}`;
+      r.querySelector(".k").textContent = (t.done ? "✓ " : "") + t.name;
+      box.querySelector(".plan-rows").appendChild(r);
+    });
+  }
+
   function renderStats() {
+    renderPlan();
     const byDay = new Map();
     s.sessions.forEach(x => { if (x.type === "work") byDay.set(dayKey(x.end), (byDay.get(dayKey(x.end)) || 0) + x.seconds); });
     const today = dayKey(Date.now());
@@ -729,7 +796,8 @@
     const t = task(id); if (!t) return;
     t.done = done;
     if (done && s.activeTask === id) {
-      const next = s.tasks.find(x => !x.done);
+      const i = s.tasks.indexOf(t);
+      const next = [...s.tasks.slice(i + 1), ...s.tasks.slice(0, i)].find(x => !x.done);
       setActive(next ? next.id : null);
       toast(next ? `Finished. Next: ${next.name}` : "Finished. That's everything.");
     }
@@ -778,7 +846,7 @@
       `Here is my work-timer log for ${label} (${d.cycle.workMinutes} min work / ${d.cycle.breakMinutes} min break cycles).`,
       `Total focused: ${dur(work.reduce((a, x) => a + x.seconds, 0))} across ${work.filter(x => x.completed).length} full cycles.`,
       ``, `Tasks:`,
-      ...(d.tasks.length ? d.tasks.map(t => `- [${t.done ? "x" : " "}] ${t.name}: ${t.minutesWorked} min${t.estimate ? ` of ${t.estimate} estimated` : ""}${t.notes ? ` (${t.notes})` : ""}`) : ["- (none)"]),
+      ...(d.tasks.length ? d.tasks.map(t => `- [${t.done ? "x" : " "}] ${t.name}: ${t.minutesWorked} min${t.estimate ? ` of ${t.estimate} estimated${t.minutesWorked > t.estimate ? `, ${t.minutesWorked - t.estimate} over` : t.done && t.minutesWorked < t.estimate ? `, ${t.estimate - t.minutesWorked} early` : ""}` : ""}${t.notes ? ` (${t.notes})` : ""}`) : ["- (none)"]),
       ``, `Sessions:`,
       ...(work.length ? work.map(x => `- ${new Date(x.start).toLocaleDateString([], { month: "short", day: "numeric" })} ${hm(x.start)}-${hm(x.end)} ${x.task || "untitled"} (${x.minutes} min${x.completed ? "" : ", partial"})${x.note ? `: ${x.note}` : ""}`) : ["- (none)"]),
       ``, `Raw JSON:`, "```json", JSON.stringify(d, null, 2), "```",
@@ -898,7 +966,6 @@
   $("settingsBtn").onclick = () => {
     const st = s.settings;
     $("setWork").value = st.work; $("setBreak").value = st.brk;
-    $("setAutoBreak").checked = st.autoBreak; $("setAutoWork").checked = st.autoWork;
     $("setAskNote").checked = st.askNote; $("setSound").checked = st.sound; $("setNotify").checked = st.notify;
     $("setSCWork").value = st.scWork; $("setSCBreak").value = st.scBreak;
     $("settingsDlg").showModal();
@@ -906,7 +973,6 @@
   $("settingsDlg").onclose = () => {
     const st = s.settings, clamp = (v, lo, hi, d) => Math.min(hi, Math.max(lo, Math.round(+v) || d));
     st.work = clamp($("setWork").value, 1, 180, 40); st.brk = clamp($("setBreak").value, 1, 60, 10);
-    st.autoBreak = $("setAutoBreak").checked; st.autoWork = $("setAutoWork").checked;
     st.askNote = $("setAskNote").checked; st.sound = $("setSound").checked; st.notify = $("setNotify").checked;
     st.scWork = $("setSCWork").value.trim(); st.scBreak = $("setSCBreak").value.trim();
     if (!s.phaseStart) s.total = s.remaining = phaseLen(s.phase);
@@ -925,6 +991,11 @@
     setTimeout(() => { delete b.dataset.armed; b.textContent = "Erase all data"; b.style.color = ""; }, 4000);
   };
   $("keysBtn").onclick = () => $("keysDlg").showModal();
+
+  // A closed dialog can keep focus on its textarea, which would swallow shortcuts.
+  document.querySelectorAll("dialog").forEach(d => d.addEventListener("close", () => {
+    if (d.contains(document.activeElement)) document.activeElement.blur();
+  }));
 
   document.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector("dialog[open]")) return;
