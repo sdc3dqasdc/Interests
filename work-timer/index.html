@@ -17,14 +17,14 @@
       --bg: #121214; --surface: #1b1b1e; --surface-2: #222226; --ink: #eceae6; --muted: #9b978f;
       --faint: #6b6862; --line: #2d2d31; --accent: #748ffc; --accent-ink: #0d0d10;
       --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3);
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3); color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #121214; --surface: #1b1b1e; --surface-2: #222226; --ink: #eceae6; --muted: #9b978f;
     --faint: #6b6862; --line: #2d2d31; --accent: #748ffc; --accent-ink: #0d0d10;
     --work: #ff8a50; --work-tint: #2a1c15; --break: #69db7c; --break-tint: #15241a; --on-phase: #111113;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3);
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.3); color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -367,7 +367,7 @@
     <div class="set"><span>On work start</span><input class="field" id="setSCWork" placeholder="Shortcut name or URL" style="width:200px"></div>
     <div class="set"><span>On break start</span><input class="field" id="setSCBreak" placeholder="Shortcut name or URL" style="width:200px"></div>
     <div class="wrap"><button type="button" class="btn" id="testSC">Test work start</button><button type="button" class="btn" id="testSCB">Test break start</button></div>
-    <div class="foot"><button class="link" value="wipe" id="wipeBtn" style="margin-right:auto">Erase all data</button><button class="btn primary" value="ok">Done</button></div>
+    <div class="foot"><button type="button" class="link" id="wipeBtn" style="margin-right:auto">Erase all data</button><button class="btn primary" value="ok">Done</button></div>
   </form>
 </dialog>
 
@@ -904,10 +904,6 @@
     $("settingsDlg").showModal();
   };
   $("settingsDlg").onclose = () => {
-    if ($("settingsDlg").returnValue === "wipe") {
-      if (confirm("Erase all tasks, sessions and settings? This can't be undone.")) { localStorage.removeItem(KEY); location.reload(); }
-      return;
-    }
     const st = s.settings, clamp = (v, lo, hi, d) => Math.min(hi, Math.max(lo, Math.round(+v) || d));
     st.work = clamp($("setWork").value, 1, 180, 40); st.brk = clamp($("setBreak").value, 1, 60, 10);
     st.autoBreak = $("setAutoBreak").checked; st.autoWork = $("setAutoWork").checked;
@@ -922,6 +918,12 @@
   $("testSCB").onclick = () => testHook("setSCBreak");
   $("fillMac").onclick = () => { $("setSCWork").value = "Work Timer Focus"; $("setSCBreak").value = "Work Timer Break"; };
   $("fillWin").onclick = () => { $("setSCWork").value = "worktimer://block"; $("setSCBreak").value = "worktimer://unblock"; };
+  $("wipeBtn").onclick = () => {
+    const b = $("wipeBtn");
+    if (b.dataset.armed) { try { localStorage.removeItem(KEY); } catch {} location.reload(); return; }
+    b.dataset.armed = "1"; b.textContent = "Click again to erase everything"; b.style.color = "var(--work)";
+    setTimeout(() => { delete b.dataset.armed; b.textContent = "Erase all data"; b.style.color = ""; }, 4000);
+  };
   $("keysBtn").onclick = () => $("keysDlg").showModal();
 
   document.addEventListener("keydown", e => {
