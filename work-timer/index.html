@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work Timer</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70;
+    --line: #e2e0db; --work: #c2410c; --break: #15803d; --accent: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141416; --panel: #1d1d20; --ink: #ececee; --muted: #9a9aa2;
+      --line: #2e2e33; --work: #fb923c; --break: #4ade80; --accent: #60a5fa;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141416; --panel: #1d1d20; --ink: #ececee; --muted: #9a9aa2;
+    --line: #2e2e33; --work: #fb923c; --break: #4ade80; --accent: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .app { display: grid; grid-template-columns: 1fr 360px; min-height: 100vh; }
+  main { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 16px; gap: 18px; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); padding: 20px 16px; overflow-y: auto; max-height: 100vh; }
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; }
+    aside { border-left: 0; border-top: 1px solid var(--line); max-height: none; }
+  }
+  .phase { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; }
+  .phase.work { color: var(--work); } .phase.break { color: var(--break); }
+  .ring { position: relative; width: min(320px, 80vw); aspect-ratio: 1; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 10; }
+  .ring .track { stroke: var(--line); }
+  .ring .bar { stroke-linecap: round; transition: stroke-dashoffset .5s linear; }
+  .clock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .time { font-size: clamp(48px, 14vw, 72px); font-variant-numeric: tabular-nums; font-weight: 300; }
+  .cycle { color: var(--muted); font-size: 13px; }
+  .current { font-size: 16px; text-align: center; min-height: 24px; color: var(--muted); }
+  .current b { color: var(--ink); font-weight: 600; }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  button {
+    font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 20px 0 8px; }
+  h2:first-child { margin-top: 0; }
+  .row { display: flex; gap: 6px; }
+  input[type=text], textarea {
+    font: inherit; width: 100%; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--bg); color: var(--ink);
+  }
+  textarea { font-family: ui-monospace, Menlo, monospace; font-size: 12px; min-height: 90px; resize: vertical; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .task { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+  .task:hover { background: var(--bg); }
+  .task.active { outline: 2px solid var(--accent); }
+  .task.done .name { text-decoration: line-through; color: var(--muted); }
+  .task .name { flex: 1; overflow-wrap: anywhere; }
+  .task .mins { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .task .x { border: 0; background: none; color: var(--muted); padding: 0 4px; }
+  .log li { font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+  .log .t { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .stat .v { font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .msg { font-size: 12px; color: var(--muted); min-height: 16px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <div class="phase work" id="phase">Work</div>
+    <div class="ring">
+      <svg viewBox="0 0 120 120">
+        <circle class="track" cx="60" cy="60" r="54"/>
+        <circle class="bar" id="bar" cx="60" cy="60" r="54"/>
+      </svg>
+      <div class="clock">
+        <div class="time" id="time">40:00</div>
+        <div class="cycle" id="cycle">Cycle 1</div>
+      </div>
+    </div>
+    <div class="current" id="current">No task selected</div>
+    <div class="controls">
+      <button class="primary" id="startBtn">Start</button>
+      <button id="skipBtn">Skip phase</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </main>
+
+  <aside>
+    <h2>Today</h2>
+    <div class="stats">
+      <div class="stat"><div class="v" id="statWork">0m</div><div class="k">focused</div></div>
+      <div class="stat"><div class="v" id="statCycles">0</div><div class="k">cycles done</div></div>
+    </div>
+
+    <h2>Tasks</h2>
+    <div class="row">
+      <input type="text" id="taskInput" placeholder="Add a task, press Enter">
+    </div>
+    <ul id="tasks" style="margin-top:8px"></ul>
+
+    <h2>Session log</h2>
+    <ul class="log" id="log"></ul>
+
+    <h2>Claude</h2>
+    <div class="btns">
+      <button class="small" id="copyBtn">Copy log for Claude</button>
+      <button class="small" id="exportBtn">Download JSON</button>
+    </div>
+    <textarea id="importBox" style="margin-top:8px" placeholder='Paste JSON from Claude, e.g. {"tasks":[{"name":"Read chapter 3"}]}'></textarea>
+    <div class="btns">
+      <button class="small" id="importBtn">Import</button>
+      <label class="small" style="font-size:13px;color:var(--muted);align-self:center">
+        <input type="checkbox" id="replaceChk"> replace existing tasks
+      </label>
+    </div>
+    <div class="msg" id="msg"></div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const WORK = 40 * 60, BREAK = 10 * 60;
+  const KEY = "work-timer-v1";
+  const C = 2 * Math.PI * 54;
+
+  const load = () => {
+    try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; }
+  };
+  const fresh = () => ({ tasks: [], sessions: [], activeTask: null,
+    phase: "work", cycle: 1, remaining: WORK, endsAt: null, phaseStart: null });
+  let s = Object.assign(fresh(), load() || {});
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} };
+
+  const $ = id => document.getElementById(id);
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const fmt = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+  const hm = iso => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const today = () => new Date().toDateString();
+  const taskName = id => (s.tasks.find(t => t.id === id) || {}).name || null;
+
+  // Recorded minutes per task come from logged work sessions, so the log is the single source of truth.
+  const minutesFor = id => Math.round(s.sessions.filter(x => x.type === "work" && x.taskId === id)
+    .reduce((a, x) => a + x.seconds, 0) / 60);
+
+  function logSession(type, seconds, completed) {
+    if (seconds < 30) return;
+    s.sessions.push({ type, taskId: type === "work" ? s.activeTask : null,
+      task: type === "work" ? taskName(s.activeTask) : null,
+      start: s.phaseStart, end: new Date().toISOString(), seconds, completed });
+  }
+
+  function elapsed() {
+    const total = s.phase === "work" ? WORK : BREAK;
+    return total - s.remaining - (s.sliceOffset || 0);
+  }
+
+  function nextPhase(completed) {
+    logSession(s.phase, elapsed(), completed);
+    s.sliceOffset = 0;
+    if (s.phase === "work") { s.phase = "break"; s.remaining = BREAK; }
+    else { s.phase = "work"; s.remaining = WORK; s.cycle++; }
+    s.phaseStart = new Date().toISOString();
+    if (s.endsAt) s.endsAt = Date.now() + s.remaining * 1000;
+    if (completed) notify();
+    save(); render();
+  }
+
+  function notify() {
+    const text = s.phase === "break" ? "Work block done. Take 10 minutes." : "Break over. Back to work.";
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.25, 0.5].forEach(t => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = s.phase === "break" ? 660 : 880;
+        g.gain.setValueAtTime(0.15, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.2);
+        o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.2);
+      });
+    } catch {}
+    if ("Notification" in window && Notification.permission === "granted") new Notification("Work Timer", { body: text });
+  }
+
+  function tick() {
+    if (!s.endsAt) return;
+    s.remaining = Math.max(0, Math.round((s.endsAt - Date.now()) / 1000));
+    if (s.remaining === 0) nextPhase(true);
+    else renderClock();
+  }
+
+  function start() {
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+    if (!s.phaseStart) s.phaseStart = new Date().toISOString();
+    s.endsAt = Date.now() + s.remaining * 1000;
+    save(); render();
+  }
+  function pause() { tick(); s.endsAt = null; save(); render(); }
+
+  function renderClock() {
+    const total = s.phase === "work" ? WORK : BREAK;
+    $("time").textContent = fmt(s.remaining);
+    const bar = $("bar");
+    bar.style.stroke = `var(--${s.phase})`;
+    bar.style.strokeDasharray = C;
+    bar.style.strokeDashoffset = C * (s.remaining / total);
+    document.title = `${fmt(s.remaining)} ${s.phase === "work" ? "Work" : "Break"}`;
+  }
+
+  function render() {
+    renderClock();
+    const p = $("phase");
+    p.textContent = s.phase === "work" ? "Work · 40 min" : "Break · 10 min";
+    p.className = "phase " + s.phase;
+    $("cycle").textContent = `Cycle ${s.cycle}`;
+    $("startBtn").textContent = s.endsAt ? "Pause" : (s.phaseStart ? "Resume" : "Start");
+    const name = taskName(s.activeTask);
+    $("current").innerHTML = name ? `Working on <b></b>` : "No task selected";
+    if (name) $("current").querySelector("b").textContent = name;
+
+    const ul = $("tasks"); ul.innerHTML = "";
+    s.tasks.forEach(t => {
+      const li = document.createElement("li");
+      li.className = "task" + (t.done ? " done" : "") + (t.id === s.activeTask ? " active" : "");
+      li.innerHTML = `<input type="checkbox"><span class="name"></span><span class="mins"></span><button class="x" title="Delete">×</button>`;
+      li.querySelector(".name").textContent = t.name;
+      const m = minutesFor(t.id);
+      li.querySelector(".mins").textContent = (m ? m + "m" : "") + (t.estimate ? ` / ${t.estimate}m` : "");
+      const cb = li.querySelector("input"); cb.checked = !!t.done;
+      cb.onclick = e => { e.stopPropagation(); t.done = cb.checked; if (t.done && s.activeTask === t.id) s.activeTask = null; save(); render(); };
+      li.querySelector(".x").onclick = e => { e.stopPropagation(); s.tasks = s.tasks.filter(x => x.id !== t.id); if (s.activeTask === t.id) s.activeTask = null; save(); render(); };
+      li.onclick = () => { if (s.phase === "work" && s.phaseStart && s.activeTask !== t.id) splitWork(); s.activeTask = s.activeTask === t.id ? null : t.id; save(); render(); };
+      ul.appendChild(li);
+    });
+
+    const todays = s.sessions.filter(x => new Date(x.end).toDateString() === today());
+    const workSec = todays.filter(x => x.type === "work").reduce((a, x) => a + x.seconds, 0);
+    $("statWork").textContent = workSec >= 3600 ? `${Math.floor(workSec / 3600)}h ${Math.round(workSec % 3600 / 60)}m` : `${Math.round(workSec / 60)}m`;
+    $("statCycles").textContent = todays.filter(x => x.type === "work" && x.completed).length;
+
+    const log = $("log"); log.innerHTML = "";
+    todays.slice().reverse().forEach(x => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="n"></span><span class="t"></span>`;
+      li.querySelector(".n").textContent = x.type === "work" ? (x.task || "Untitled work") : "Break";
+      li.querySelector(".t").textContent = `${hm(x.start)} · ${Math.round(x.seconds / 60)}m`;
+      log.appendChild(li);
+    });
+    if (!todays.length) log.innerHTML = `<li><span class="t">Nothing logged yet today</span></li>`;
+  }
+
+  // Switching task mid-block closes the current slice so minutes go to the right task.
+  function splitWork() {
+    tick();
+    logSession("work", elapsed(), false);
+    s.sliceOffset = (s.sliceOffset || 0) + elapsed();
+    s.phaseStart = new Date().toISOString();
+  }
+
+  function addTask(name, extra = {}) {
+    name = String(name || "").trim(); if (!name) return null;
+    const t = { id: uid(), name, done: false, ...extra };
+    s.tasks.push(t); return t;
+  }
+
+  function exportData() {
+    return {
+      app: "work-timer", version: 1, exportedAt: new Date().toISOString(),
+      cycle: { workMinutes: 40, breakMinutes: 10 },
+      tasks: s.tasks.map(t => ({ name: t.name, done: !!t.done, minutesWorked: minutesFor(t.id),
+        ...(t.estimate ? { estimate: t.estimate } : {}), ...(t.notes ? { notes: t.notes } : {}) })),
+      sessions: s.sessions.map(({ taskId, ...x }) => ({ ...x, minutes: Math.round(x.seconds / 60) })),
+    };
+  }
+
+  function forClaude() {
+    const d = exportData();
+    const todays = d.sessions.filter(x => new Date(x.end).toDateString() === today());
+    const lines = [
+      `Work timer log (40 min work / 10 min break), exported ${new Date().toLocaleString()}.`,
+      ``, `Tasks:`,
+      ...d.tasks.map(t => `- [${t.done ? "x" : " "}] ${t.name} (${t.minutesWorked} min${t.estimate ? ` of ${t.estimate} est.` : ""})`),
+      ``, `Today's sessions:`,
+      ...todays.map(x => `- ${hm(x.start)}-${hm(x.end)} ${x.type}${x.task ? `: ${x.task}` : ""} (${x.minutes} min${x.completed ? "" : ", cut short"})`),
+      ``, `Raw JSON:`, "```json", JSON.stringify(d, null, 2), "```",
+      ``, `To send tasks back, reply with JSON like {"tasks":[{"name":"...","estimate":40}]} and I will paste it into the timer.`,
+    ];
+    return lines.join("\n");
+  }
+
+  function importData(text, replace) {
+    let raw = String(text).trim();
+    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fence) raw = fence[1];
+    const d = JSON.parse(raw);
+    const list = Array.isArray(d) ? d : (d.tasks || []);
+    if (replace) { s.tasks = []; s.activeTask = null; }
+    let n = 0;
+    list.forEach(t => {
+      const name = typeof t === "string" ? t : t.name;
+      const extra = typeof t === "object" ? {
+        done: !!t.done,
+        ...(t.estimate ? { estimate: Number(t.estimate) } : {}),
+        ...(t.notes ? { notes: String(t.notes) } : {}),
+      } : {};
+      if (addTask(name, extra)) n++;
+    });
+    if (Array.isArray(d.sessions) && d.app === "work-timer") {
+      const seen = new Set(s.sessions.map(x => x.start + x.type));
+      d.sessions.forEach(x => {
+        if (seen.has(x.start + x.type)) return;
+        const t = s.tasks.find(t => t.name === x.task);
+        s.sessions.push({ type: x.type, taskId: t ? t.id : null, task: x.task || null,
+          start: x.start, end: x.end, seconds: x.seconds ?? x.minutes * 60, completed: !!x.completed });
+      });
+    }
+    if (d.activeTask) { const t = s.tasks.find(t => t.name === d.activeTask); if (t) s.activeTask = t.id; }
+    save(); render();
+    return n;
+  }
+
+  const msg = t => { $("msg").textContent = t; setTimeout(() => { if ($("msg").textContent === t) $("msg").textContent = ""; }, 4000); };
+
+  $("startBtn").onclick = () => s.endsAt ? pause() : start();
+  $("skipBtn").onclick = () => { tick(); nextPhase(false); };
+  $("resetBtn").onclick = () => {
+    if (!confirm("Reset the timer to the start of a work block? Tasks and log are kept.")) return;
+    Object.assign(s, { phase: "work", cycle: 1, remaining: WORK, endsAt: null, phaseStart: null, sliceOffset: 0 });
+    save(); render();
+  };
+  $("taskInput").onkeydown = e => {
+    if (e.key !== "Enter") return;
+    const t = addTask(e.target.value); if (t && !s.activeTask) s.activeTask = t.id;
+    e.target.value = ""; save(); render();
+  };
+  $("copyBtn").onclick = async () => {
+    try { await navigator.clipboard.writeText(forClaude()); msg("Copied. Paste it into Claude."); }
+    catch { $("importBox").value = forClaude(); msg("Clipboard blocked, log placed in the box below."); }
+  };
+  $("exportBtn").onclick = () => {
+    const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `work-log-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  $("importBtn").onclick = () => {
+    try { const n = importData($("importBox").value, $("replaceChk").checked); $("importBox").value = ""; msg(`Imported ${n} task${n === 1 ? "" : "s"}.`); }
+    catch (e) { msg("Could not read that JSON: " + e.message); }
+  };
+
+  // Claude can also hand over tasks via a link: index.html#import=<url-encoded JSON>
+  // or by placing a tasks.json next to this file and opening index.html?load=tasks.json.
+  async function autoImport() {
+    const h = location.hash.match(/import=(.*)$/);
+    if (h) {
+      try { const n = importData(decodeURIComponent(h[1]), false); msg(`Imported ${n} tasks from link.`); } catch (e) { msg("Link import failed: " + e.message); }
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+    const q = new URLSearchParams(location.search).get("load");
+    if (q) {
+      try { const r = await fetch(q); const n = importData(await r.text(), true); msg(`Loaded ${n} tasks from ${q}.`); }
+      catch (e) { msg(`Could not load ${q}: ${e.message}`); }
+    }
+  }
+
+  setInterval(tick, 500);
+  document.addEventListener("visibilitychange", tick);
+  tick(); render(); autoImport();
+})();
+</script>
+</body>
+</html>

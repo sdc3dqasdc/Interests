@@ -1,0 +1,8 @@
+{
+  "tasks": [
+    { "name": "Read chapter 3", "estimate": 40 },
+    { "name": "Problem set 2, questions 1-4", "estimate": 80, "notes": "start with Q3" },
+    "Review lecture notes"
+  ],
+  "activeTask": "Read chapter 3"
+}
